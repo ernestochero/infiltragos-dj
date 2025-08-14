@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { RequestStatus } from '@prisma/client';
 
 export const requestSchema = z.object({
   song_title: z.string().min(1).max(100),
@@ -8,4 +9,14 @@ export const requestSchema = z.object({
 
 export const voteSchema = z.object({
   requestId: z.string().cuid(),
+});
+
+export const requestStatusSchema = z.object({
+  status: z.nativeEnum(RequestStatus),
+  sortIndex: z.number().int().optional(),
+});
+
+export const reorderSchema = z.object({
+  columnStatus: z.nativeEnum(RequestStatus),
+  orderedIds: z.array(z.string().cuid()),
 });
