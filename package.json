@@ -19,21 +19,23 @@
     "next-auth": "4.24.5",
     "zod": "3.23.8",
     "@supabase/supabase-js": "2.42.0",
-    "@upstash/ratelimit": "1.0.5",
-    "@upstash/redis": "1.28.1",
+    "@upstash/ratelimit": "2.0.6",
+    "@upstash/redis": "1.35.3",
     "dnd-kit": "latest",
     "lucide-react": "0.339.0",
-    "@shadcn/ui": "0.8.0",
+    "@shadcn/ui": "0.0.4",
     "swr": "2.2.4",
     "qrcode": "1.5.3"
   },
   "devDependencies": {
-    "typescript": "5.4.0",
+    "typescript": "5.3.3",
     "prisma": "5.9.1",
     "tailwindcss": "3.4.1",
     "postcss": "8.4.31",
     "autoprefixer": "10.4.16",
     "vitest": "0.34.6",
-    "ts-node": "10.9.2"
+    "ts-node": "10.9.2",
+    "@types/react": "18.2.21",
+    "@types/node": "20.17.0"
   }
 }
