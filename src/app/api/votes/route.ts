@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { voteSchema } from '@/lib/schemas';
 import { rateLimit } from '@/lib/rate-limit';
-import { requests } from '@/lib/requests-store';
-
-const votes = new Map<string, Set<string>>();
+import prisma from '@/lib/prisma';
+import crypto from 'crypto';
 
 export async function POST(req: NextRequest) {
   const ip = req.ip ?? '0.0.0.0';
@@ -13,11 +12,33 @@ export async function POST(req: NextRequest) {
   if (!rateLimit('vote:' + ip + ':' + parse.data.requestId, 1, 24 * 60 * 60 * 1000)) {
     return NextResponse.json({ error: 'Rate limit' }, { status: 429 });
   }
-  const reqObj = requests.find(r => r.id === parse.data.requestId);
+
+  const reqObj = await prisma.request.findUnique({ where: { id: parse.data.requestId } });
   if (!reqObj) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  reqObj.votes += 1;
-  let set = votes.get(parse.data.requestId);
-  if (!set) { set = new Set(); votes.set(parse.data.requestId, set); }
-  set.add(ip);
+
+  const ipHash = crypto.createHash('sha256').update(ip).digest('hex');
+  const existing = await prisma.vote.findFirst({
+    where: {
+      requestId: parse.data.requestId,
+      ipHash,
+      createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+    },
+  });
+  if (existing) {
+    return NextResponse.json({ error: 'Rate limit' }, { status: 429 });
+  }
+
+  try {
+    await prisma.$transaction([
+      prisma.vote.create({ data: { requestId: parse.data.requestId, ipHash } }),
+      prisma.request.update({
+        where: { id: parse.data.requestId },
+        data: { votes: { increment: 1 } },
+      }),
+    ]);
+  } catch {
+    return NextResponse.json({ error: 'Database error' }, { status: 500 });
+  }
+
   return NextResponse.json({ ok: true });
 }
