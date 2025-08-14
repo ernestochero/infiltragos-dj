@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requests } from '@/app/api/requests/route';
+import { requests } from '@/lib/requests-store';
 
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || 'changeme';
 

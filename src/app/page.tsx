@@ -35,7 +35,7 @@ export default function RequestForm() {
       });
       setState('success');
       window.location.href = '/queue';
-    } catch (err) {
+    } catch {
       setErrors('Error al enviar');
       setState('idle');
     }

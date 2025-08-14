@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { voteSchema } from '@/lib/schemas';
 import { rateLimit } from '@/lib/rate-limit';
+import { requests } from '@/lib/requests-store';
 
 const votes = new Map<string, Set<string>>();
-import { requests } from '@/app/api/requests/route';
 
 export async function POST(req: NextRequest) {
   const ip = req.ip ?? '0.0.0.0';
