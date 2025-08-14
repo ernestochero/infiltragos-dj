@@ -1,0 +1,39 @@
+# Docker Compose configuration for PostgreSQL and pgAdmin
+version: "3.9"
+
+services:
+  # PostgreSQL service
+  postgres:
+    image: postgres:15
+    restart: unless-stopped
+    ports:
+      - "5432:5432" # Expose PostgreSQL default port
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres} # Database user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres} # Database password
+      POSTGRES_DB: ${POSTGRES_DB:-app_db} # Default database name
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data # Persist database data
+    networks:
+      - postgres_network
+
+  # pgAdmin 4 service
+  pgadmin:
+    image: dpage/pgadmin4
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    ports:
+      - "5050:80" # Map host port 5050 to container's port 80
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@admin.com} # Admin email
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin} # Admin password
+    volumes:
+      - ./data/pgadmin:/var/lib/pgadmin # Persist pgAdmin data
+    networks:
+      - postgres_network
+
+# Shared Docker network
+networks:
+  postgres_network:
+    driver: bridge
