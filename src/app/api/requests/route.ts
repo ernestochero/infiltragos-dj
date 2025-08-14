@@ -7,7 +7,13 @@ import { RequestStatus } from '@prisma/client';
 export async function GET(req: NextRequest) {
   const status = req.nextUrl.searchParams.get('status') as RequestStatus | null;
   const where = status ? { status } : {};
-  const list = await prisma.request.findMany({ where, orderBy: { createdAt: 'asc' } });
+  const list = await prisma.request.findMany({
+    where,
+    orderBy: [
+      { sortIndex: 'asc' },
+      { createdAt: 'asc' },
+    ],
+  });
   return NextResponse.json(list);
 }
 

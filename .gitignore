@@ -8,8 +8,9 @@ tsconfig.tsbuildinfo
 package-lock.json
 
 # Prisma local migrations / lock
-prisma/migrations/
-!prisma/migrations/*.sql  # opcional si quieres versionar solo SQL
+prisma/migrations/*
+!prisma/migrations/
+!prisma/migrations/**/migration.sql
 prisma/migrations/migration_lock.toml
 
 # Local DB data

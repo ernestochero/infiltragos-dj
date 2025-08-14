@@ -14,6 +14,7 @@ model Request {
   tableOrName     String?
   status          RequestStatus @default(PENDING)
   votes           Int           @default(0)
+  sortIndex       Int           @default(0)
   fingerprintHash String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
