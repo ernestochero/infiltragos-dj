@@ -9,9 +9,12 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run || jest --runInBand --passWithNoTests",
-    "prisma:migrate": "prisma migrate dev",
+    "db:up": "docker compose up -d postgres",
+    "db:wait": "node scripts/wait-for-db.js",
+    "prisma:gen": "prisma generate",
+    "prisma:migrate": "prisma migrate dev --name init",
     "prisma:studio": "prisma studio",
-    "seed": "ts-node prisma/seed.ts",
+    "db:seed": "ts-node --esm scripts/seed.ts",
     "prepare": "husky install"
   },
   "dependencies": {

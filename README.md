@@ -15,6 +15,16 @@ npm install
 npm run dev
 ```
 
+### Database
+The project uses PostgreSQL via the existing `docker-compose.yml`.
+
+```
+npm run db:up       # start postgres (hostname: postgres, port: 5432)
+npm run db:wait     # wait until it is ready
+npm run prisma:migrate
+npm run db:seed
+```
+
 ## Testing
 ```
 npm test
