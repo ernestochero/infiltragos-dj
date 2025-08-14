@@ -1,0 +1,35 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Request {
+  id             String       @id @default(cuid())
+  songTitle      String
+  artist         String
+  tableOrName    String?
+  status         RequestStatus @default(PENDING)
+  votes          Vote[]
+  fingerprintHash String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model Vote {
+  id        String   @id @default(cuid())
+  requestId String
+  request   Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  ipHash    String
+  createdAt DateTime @default(now())
+}
+
+enum RequestStatus {
+  PENDING
+  PLAYING
+  DONE
+  REJECTED
+}
