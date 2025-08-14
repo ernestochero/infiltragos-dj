@@ -5,6 +5,7 @@ export interface Request {
   status: string;
   votes: number;
   createdAt: number;
+  tableOrName?: string;
 }
 
 /**

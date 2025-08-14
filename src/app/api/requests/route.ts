@@ -2,9 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requestSchema } from '@/lib/schemas';
 import { findDuplicate, Request } from '@/lib/dedupe';
 import { rateLimit } from '@/lib/rate-limit';
+import { requests } from '@/lib/requests-store';
 import crypto from 'crypto';
-
-export const requests: Request[] = [];
 
 export async function GET(req: NextRequest) {
   const status = req.nextUrl.searchParams.get('status');

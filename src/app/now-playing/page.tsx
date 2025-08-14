@@ -1,3 +1,4 @@
+"use client";
 import useSWR from 'swr';
 
 interface Request { id: string; songTitle: string; artist: string; }
