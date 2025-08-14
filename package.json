@@ -14,7 +14,7 @@
     "prisma:gen": "prisma generate",
     "prisma:migrate": "prisma migrate dev --name init",
     "prisma:studio": "prisma studio",
-    "db:seed": "ts-node --esm scripts/seed.ts",
+    "db:seed": "tsx scripts/seed.ts",
     "prepare": "husky install"
   },
   "dependencies": {
@@ -55,7 +55,8 @@
     "prisma": "5.9.1",
     "tailwindcss": "3.4.1",
     "ts-node": "10.9.2",
-      "typescript": "5.4.5",
+    "tsx": "^4.20.4",
+    "typescript": "5.4.5",
     "vitest": "0.34.6"
   },
   "lint-staged": {

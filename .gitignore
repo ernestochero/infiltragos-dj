@@ -6,3 +6,11 @@ npm-debug.log
 test.log
 tsconfig.tsbuildinfo
 package-lock.json
+
+# Prisma local migrations / lock
+prisma/migrations/
+!prisma/migrations/*.sql  # opcional si quieres versionar solo SQL
+prisma/migrations/migration_lock.toml
+
+# Local DB data
+data/
