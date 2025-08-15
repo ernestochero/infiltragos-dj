@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requestSchema } from '@/lib/schemas';
-import { rateLimit } from '@/lib/rate-limit';
+import { rateLimitByRequest } from '@/lib/rate-limit';
 import prisma from '@/lib/prisma';
 import { RequestStatus } from '@prisma/client';
 
@@ -28,12 +28,12 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const ip = req.ip ?? '0.0.0.0';
-  const limit = rateLimit('req:' + ip, 1, 2 * 60 * 1000);
+  const limit = rateLimitByRequest(req, 'req', 1, 2 * 60 * 1000);
   if (!limit.allowed) {
+    const retryAfter = Math.ceil(limit.retryAfterMs / 1000);
     return NextResponse.json(
-      { error: 'Rate limit', retry_after_seconds: Math.ceil(limit.retryAfterMs / 1000) },
-      { status: 429 },
+      { error: 'Rate limit', retry_after_seconds: retryAfter },
+      { status: 429, headers: { 'Retry-After': retryAfter.toString() } },
     );
   }
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
