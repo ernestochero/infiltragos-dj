@@ -5,6 +5,8 @@ export const requestSchema = z.object({
   song_title: z.string().min(1).max(100),
   artist: z.string().min(1).max(100),
   table_or_name: z.string().max(100).optional(),
+  track_id: z.string().optional(),
+  track_uri: z.string().optional(),
 });
 
 export const voteSchema = z.object({
