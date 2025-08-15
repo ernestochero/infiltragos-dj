@@ -1,3 +1,6 @@
+import { NextRequest } from 'next/server';
+import { ADMIN_COOKIE } from './auth';
+
 interface Record {
   count: number;
   expires: number;
@@ -29,4 +32,19 @@ export function rateLimit(key: string, limit: number, windowMs: number): RateLim
   }
   rec.count++;
   return { allowed: true, retryAfterMs: rec.expires - now };
+}
+
+/**
+ * Rate limit scoped by user session (if present) or IP address.
+ */
+export function rateLimitByRequest(
+  req: NextRequest,
+  prefix: string,
+  limit: number,
+  windowMs: number,
+): RateLimitResult {
+  const user = req.cookies.get(ADMIN_COOKIE)?.value;
+  const ip = req.ip ?? '0.0.0.0';
+  const scope = user ? `u:${user}` : `ip:${ip}`;
+  return rateLimit(`${prefix}:${scope}`, limit, windowMs);
 }
