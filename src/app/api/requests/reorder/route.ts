@@ -3,12 +3,6 @@ import prisma from '@/lib/prisma';
 import { reorderSchema } from '@/lib/schemas';
 
 export async function POST(req: NextRequest) {
-  const token = process.env.DJ_ADMIN_TOKEN;
-  const auth = req.headers.get('authorization');
-  const cookie = req.cookies.get('dj_admin')?.value;
-  if (auth !== `Bearer ${token}` && cookie !== token) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
 
   let body: unknown;
   try {

@@ -1,27 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-const TOKEN = process.env.DJ_ADMIN_TOKEN;
+import { hasAdminCookie } from '@/lib/auth';
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  const isAdmin = pathname.startsWith('/admin');
-  const isRequestMutation =
-    pathname.startsWith('/api/requests') && pathname !== '/api/requests' && req.method !== 'GET';
+  const isAdminRoute = pathname.startsWith('/admin');
+  const isRequestsRoute = pathname.startsWith('/api/requests');
+  const isPublicRequestsGet =
+    isRequestsRoute && req.method === 'GET' && pathname === '/api/requests';
 
-  if (isAdmin || isRequestMutation) {
-    const auth = req.headers.get('authorization');
-    const cookie = req.cookies.get('dj_admin')?.value;
-    if (auth === `Bearer ${TOKEN}` || cookie === TOKEN) {
+  if (isPublicRequestsGet) {
+    return NextResponse.next();
+  }
+
+  if (isAdminRoute || isRequestsRoute) {
+    if (hasAdminCookie(req)) {
       return NextResponse.next();
     }
-    if (isAdmin) {
+    if (isAdminRoute) {
       return NextResponse.redirect(new URL('/login', req.url));
     }
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/api/requests/:path*'],
+  matcher: ['/admin', '/admin/:path*', '/api/requests/:path*'],
 };

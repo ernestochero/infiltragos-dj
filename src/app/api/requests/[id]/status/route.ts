@@ -6,12 +6,6 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } },
 ) {
-  const token = process.env.DJ_ADMIN_TOKEN;
-  const auth = req.headers.get('authorization');
-  const cookie = req.cookies.get('dj_admin')?.value;
-  if (auth !== `Bearer ${token}` && cookie !== token) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
 
   let body: unknown;
   try {
