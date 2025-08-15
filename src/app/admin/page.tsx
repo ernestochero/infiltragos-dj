@@ -15,6 +15,17 @@ import type { Request, RequestStatus } from '@prisma/client';
  type BoardState = Record<RequestStatus, Request[]>;
  const STATUSES: RequestStatus[] = ['PENDING', 'PLAYING', 'DONE', 'REJECTED'];
 
+ const filterRecentDone = (list: Request[]) => {
+   const cutoff = Date.now() - 60 * 60 * 1000;
+   return list
+     .filter((r) => new Date(r.updatedAt).getTime() >= cutoff)
+     .sort(
+       (a, b) =>
+         new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+     )
+     .slice(0, 10);
+ };
+
 export default function AdminPage() {
   const router = useRouter();
   const [board, setBoard] = useState<BoardState>({
@@ -38,16 +49,17 @@ export default function AdminPage() {
     return () => setBoard(prev);
   };
 
-   const fetchData = async () => {
-     const res = await fetch('/api/requests');
-     const list: Request[] = await res.json();
-     const grouped: BoardState = { PENDING: [], PLAYING: [], DONE: [], REJECTED: [] };
-     list.sort((a, b) => a.sortIndex - b.sortIndex);
-     for (const item of list) {
-       grouped[item.status].push(item);
-     }
-     setBoard(grouped);
-   };
+  const fetchData = async () => {
+    const res = await fetch('/api/requests');
+    const list: Request[] = await res.json();
+    const grouped: BoardState = { PENDING: [], PLAYING: [], DONE: [], REJECTED: [] };
+    list.sort((a, b) => a.sortIndex - b.sortIndex);
+    for (const item of list) {
+      grouped[item.status].push(item);
+    }
+    grouped.DONE = filterRecentDone(grouped.DONE);
+    setBoard(grouped);
+  };
 
    useEffect(() => {
      fetchData();
@@ -55,9 +67,9 @@ export default function AdminPage() {
      return () => clearInterval(id);
    }, []);
 
-   const findColumn = (id: string): RequestStatus | undefined => {
-     return STATUSES.find((status) => board[status].some((r) => r.id === id));
-   };
+  const findColumn = (id: string): RequestStatus | undefined => {
+    return STATUSES.find((status) => board[status].some((r) => r.id === id));
+  };
 
   const handleDragEnd = async (event: DragEndEvent) => {
      const { active, over } = event;
@@ -83,6 +95,7 @@ export default function AdminPage() {
         const toItems = draft[toCol];
         item.status = toCol;
         item.sortIndex = toItems.length;
+        item.updatedAt = new Date();
         toItems.push(item);
 
         // AUTO-ADVANCE:
@@ -99,9 +112,12 @@ export default function AdminPage() {
             const [prev] = draft.PLAYING.splice(prevIdx, 1);
             prev.status = 'DONE';
             prev.sortIndex = draft.DONE.length;
+            prev.updatedAt = new Date();
             draft.DONE.push(prev);
           }
         }
+
+        draft.DONE = filterRecentDone(draft.DONE);
       });
 
       try {
@@ -148,6 +164,50 @@ export default function AdminPage() {
     }
   };
 
+  const handleCardClick = async (item: Request) => {
+    const prevPlayingTop = board.PLAYING[0];
+    const rollback = optimisticUpdate((draft) => {
+      const fromIdx = draft.PENDING.findIndex((r) => r.id === item.id);
+      if (fromIdx === -1) return;
+      const [moved] = draft.PENDING.splice(fromIdx, 1);
+      moved.status = 'PLAYING';
+      moved.sortIndex = draft.PLAYING.length;
+      moved.updatedAt = new Date();
+      draft.PLAYING.push(moved);
+
+      if (prevPlayingTop && prevPlayingTop.id !== item.id) {
+        const prevIdx = draft.PLAYING.findIndex((r) => r.id === prevPlayingTop.id);
+        if (prevIdx !== -1) {
+          const [prev] = draft.PLAYING.splice(prevIdx, 1);
+          prev.status = 'DONE';
+          prev.sortIndex = draft.DONE.length;
+          prev.updatedAt = new Date();
+          draft.DONE.push(prev);
+        }
+      }
+
+      draft.DONE = filterRecentDone(draft.DONE);
+    });
+
+    try {
+      await fetch(`/api/requests/${item.id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'PLAYING', sortIndex: board.PLAYING.length }),
+      });
+
+      if (prevPlayingTop && prevPlayingTop.id !== item.id) {
+        await fetch(`/api/requests/${prevPlayingTop.id}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'DONE', sortIndex: board.DONE.length }),
+        });
+      }
+    } catch {
+      rollback();
+    }
+  };
+
   const handleLogout = async () => {
     await fetch('/api/logout', { method: 'POST' });
     router.push('/login');
@@ -166,7 +226,13 @@ export default function AdminPage() {
       <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
           {STATUSES.map((status) => (
-            <Column key={status} title={status} status={status} items={board[status]} />
+            <Column
+              key={status}
+              title={status}
+              status={status}
+              items={board[status]}
+              onItemClick={status === 'PENDING' ? handleCardClick : undefined}
+            />
           ))}
         </div>
       </DndContext>

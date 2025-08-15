@@ -11,8 +11,7 @@ interface Request {
   votes: number;
   status: RequestStatus;
   tableOrName?: string;
-  // Optional extra fields you might have:
-  // createdAt?: string;
+  createdAt?: string;
   // updatedAt?: string;
 }
 
@@ -34,14 +33,11 @@ export default function QueuePage() {
       // .sort((a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''))
       [0];
 
-    // Only PENDING for the visible queue. Sort by votes desc, fallback by title
+    // Only PENDING for the visible queue. Sort by creation date asc (oldest first)
     const pendingSorted = list
       .filter((r) => r.status === 'PENDING')
       .slice()
-      .sort((a, b) => {
-        if (b.votes !== a.votes) return b.votes - a.votes;
-        return a.songTitle.localeCompare(b.songTitle);
-      });
+      .sort((a, b) => (a.createdAt ?? '').localeCompare(b.createdAt ?? ''));
 
     return { nowPlaying: playing, pending: pendingSorted };
   }, [data]);

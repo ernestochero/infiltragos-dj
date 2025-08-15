@@ -8,6 +8,7 @@ interface ColumnProps {
   title: string;
   status: RequestStatus;
   items: Request[];
+  onItemClick?: (item: Request) => void;
 }
 
 // Background + border per column status
@@ -26,7 +27,7 @@ const headerByStatus: Record<RequestStatus, string> = {
   REJECTED: 'bg-rose-200 text-rose-900',
 };
 
-export default function Column({ title, status, items }: ColumnProps) {
+export default function Column({ title, status, items, onItemClick }: ColumnProps) {
   const { setNodeRef } = useDroppable({ id: status });
 
   return (
@@ -48,7 +49,7 @@ export default function Column({ title, status, items }: ColumnProps) {
       <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
         <ul className="flex-1 overflow-y-auto p-3 space-y-3">
           {items.map((item) => (
-            <Card key={item.id} request={item} />
+            <Card key={item.id} request={item} onClick={onItemClick ? () => onItemClick(item) : undefined} />
           ))}
         </ul>
       </SortableContext>
