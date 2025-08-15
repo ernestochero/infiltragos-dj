@@ -34,7 +34,8 @@ npm test
 ## Environment
 Copy `.env.example` to `.env` and fill in values for database and realtime providers.
 
-Set `DJ_ADMIN_TOKEN` and use the same token via `Authorization: Bearer <token>` header or by logging in at `/login` to access `/admin`.
+Set `DJ_ADMIN_USER` and `DJ_ADMIN_PASSWORD` to control access to the `/admin` area.
+Log in at `/login` with those credentials to receive the admin cookie and be redirected to `/admin`. Use the "Logout" button in `/admin` to clear the session.
 
 ### Manual tests
 - Dragging a card between columns persists the new status.

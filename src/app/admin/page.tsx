@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   DndContext,
   PointerSensor,
@@ -14,8 +15,9 @@ import type { Request, RequestStatus } from '@prisma/client';
  type BoardState = Record<RequestStatus, Request[]>;
  const STATUSES: RequestStatus[] = ['PENDING', 'PLAYING', 'DONE', 'REJECTED'];
 
- export default function AdminPage() {
-   const [board, setBoard] = useState<BoardState>({
+export default function AdminPage() {
+  const router = useRouter();
+  const [board, setBoard] = useState<BoardState>({
      PENDING: [],
      PLAYING: [],
      DONE: [],
@@ -57,7 +59,7 @@ import type { Request, RequestStatus } from '@prisma/client';
      return STATUSES.find((status) => board[status].some((r) => r.id === id));
    };
 
-   const handleDragEnd = async (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
      const { active, over } = event;
      if (!over) return;
      const fromCol = findColumn(String(active.id));
@@ -146,15 +148,28 @@ import type { Request, RequestStatus } from '@prisma/client';
     }
   };
 
-   return (
-     <main className="p-4">
-       <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-           {STATUSES.map((status) => (
-             <Column key={status} title={status} status={status} items={board[status]} />
-           ))}
-         </div>
-       </DndContext>
-     </main>
-   );
- }
+  const handleLogout = async () => {
+    await fetch('/api/logout', { method: 'POST' });
+    router.push('/login');
+  };
+
+  return (
+    <main className="p-4">
+      <div className="flex justify-end mb-4">
+        <button
+          onClick={handleLogout}
+          className="text-sm text-blue-500 underline"
+        >
+          Logout
+        </button>
+      </div>
+      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+          {STATUSES.map((status) => (
+            <Column key={status} title={status} status={status} items={board[status]} />
+          ))}
+        </div>
+      </DndContext>
+    </main>
+  );
+}
