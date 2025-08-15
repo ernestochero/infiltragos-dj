@@ -39,7 +39,7 @@ jobs:
       # Aplica migraciones en RDS (producción)
       - name: Prisma migrate deploy (Prod)
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL_PROD }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npx prisma migrate deploy --schema=prisma/schema.prisma
 
       # Deploy a Vercel en producción
