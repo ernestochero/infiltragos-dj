@@ -21,21 +21,28 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 18
-          cache: 'npm'
+          # quita la caché de npm si prefieres evitar inconsistencias de plataforma
+          # cache: 'npm'
 
+      # Usamos npm install (no ci) para re-resolver optional deps nativos en Linux
       - name: Install deps
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
       - name: Prisma generate
         run: npx prisma generate
 
-      # (Opcional) también puedes forzar esto en build si lo prefieres
       - name: Build
         env:
           ROLLUP_SKIP_NODEJS_NATIVE: '1'
         run: npm run build
 
+      # Si tu script de test hace "vitest || jest" y no tienes jest, mejor llama vitest directo
       - name: Test
         env:
           ROLLUP_SKIP_NODEJS_NATIVE: '1'
-        run: npm test --if-present
+        run: |
+          if npm run -s test --if-present; then
+            echo "tests ran"
+          else
+            echo "no tests or tests failed"; exit 1
+          fi
