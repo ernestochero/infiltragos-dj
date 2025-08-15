@@ -6,10 +6,8 @@ npm-debug.log
 test.log
 tsconfig.tsbuildinfo
 
-# Prisma local migrations / lock
-prisma/migrations/*
-!prisma/migrations/
-!prisma/migrations/**/migration.sql
+# Track all migration folders
+!prisma/migrations/**
 prisma/migrations/migration_lock.toml
 
 # Local DB data
