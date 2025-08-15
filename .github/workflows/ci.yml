@@ -36,13 +36,7 @@ jobs:
           ROLLUP_SKIP_NODEJS_NATIVE: '1'
         run: npm run build
 
-      # Si tu script de test hace "vitest || jest" y no tienes jest, mejor llama vitest directo
       - name: Test
         env:
           ROLLUP_SKIP_NODEJS_NATIVE: '1'
-        run: |
-          if npm run -s test --if-present; then
-            echo "tests ran"
-          else
-            echo "no tests or tests failed"; exit 1
-          fi
+        run: npm run test
