@@ -53,7 +53,20 @@ export default function RequestForm() {
         body: JSON.stringify(parsed.data),
       });
       if (!res.ok) {
-        throw new Error('bad status');
+        let message = 'Hubo un problema al enviar tu pedido. Intenta nuevamente.';
+        if (res.status === 429) {
+          const data = (await res.json().catch(() => null)) as {
+            retry_after_seconds?: number;
+          } | null;
+          if (data && typeof data.retry_after_seconds === 'number') {
+            message = `Solo puedes pedir una canción cada 2 minutos. Intenta de nuevo en ${data.retry_after_seconds} segundos.`;
+          } else {
+            message = 'Solo puedes pedir una canción cada 2 minutos. Intenta de nuevo más tarde.';
+          }
+        }
+        setGlobalError(message);
+        setState('idle');
+        return;
       }
       setState('success');
       // opcional: limpiar y redirigir con un pequeño delay para ver el mensaje

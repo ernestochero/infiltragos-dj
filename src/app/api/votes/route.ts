@@ -15,7 +15,8 @@ export async function POST(req: NextRequest) {
   if (!body) return NextResponse.json({ error: 'Bad JSON' }, { status: 400 });
   const parse = voteSchema.safeParse(body);
   if (!parse.success) return NextResponse.json({ error: 'Invalid' }, { status: 400 });
-  if (!rateLimit('vote:' + ip + ':' + parse.data.requestId, 1, 24 * 60 * 60 * 1000)) {
+  const limit = rateLimit('vote:' + ip + ':' + parse.data.requestId, 1, 24 * 60 * 60 * 1000);
+  if (!limit.allowed) {
     return NextResponse.json({ error: 'Rate limit' }, { status: 429 });
   }
 
@@ -42,7 +43,8 @@ export async function POST(req: NextRequest) {
         data: { votes: { increment: 1 } },
       }),
     ]);
-  } catch {
+  } catch (err) {
+    console.error('Error creating vote:', err);
     return NextResponse.json({ error: 'Database error' }, { status: 500 });
   }
 
