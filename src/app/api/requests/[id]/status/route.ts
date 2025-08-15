@@ -10,16 +10,12 @@ export const revalidate = 0;
 
 const idSchema = z.string().cuid();
 
+// Authorization is enforced by middleware using the admin cookie.
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } },
 ) {
-  const adminToken = process.env.ADMIN_TOKEN;
-  const auth = req.headers.get('authorization') || '';
-  if (!adminToken || auth !== `Bearer ${adminToken}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
   const idParse = idSchema.safeParse(params.id);
   if (!idParse.success) {
     return NextResponse.json({ error: 'Invalid "id"' }, { status: 400 });

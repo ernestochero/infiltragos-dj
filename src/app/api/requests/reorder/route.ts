@@ -7,13 +7,8 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+// Authorization is enforced by middleware using the admin cookie.
 export async function POST(req: NextRequest) {
-  const adminToken = process.env.ADMIN_TOKEN;
-  const auth = req.headers.get('authorization') || '';
-  if (!adminToken || auth !== `Bearer ${adminToken}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
   if (!body) return NextResponse.json({ error: 'Bad JSON' }, { status: 400 });
 
