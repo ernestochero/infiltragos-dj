@@ -3,10 +3,10 @@ name: Deploy Prod (tags or release)
 on:
   push:
     branches:
-      - release        # despliega si haces push/merge a release
+      - release        # deploy si haces push/merge a release
     tags:
-      - 'v*'           # o si publicas un tag como v1.0.0
-  workflow_dispatch:    # ejecutar manualmente desde Actions
+      - 'v*'           # o deploy si creas un tag tipo v1.0.0
+  workflow_dispatch:    # permitir ejecutar manualmente
 
 permissions:
   contents: read
@@ -30,17 +30,19 @@ jobs:
           node-version: 18
           cache: 'npm'
 
-      - name: Install dependencies
+      - name: Install deps
         run: npm ci
 
       - name: Prisma generate
         run: npx prisma generate
 
-      - name: Apply DB migrations (Prod)
+      # Aplica migraciones en RDS (producción)
+      - name: Prisma migrate deploy (Prod)
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL_PROD }}
         run: npx prisma migrate deploy --schema=prisma/schema.prisma
 
+      # Deploy a Vercel en producción
       - name: Deploy to Vercel (production)
         uses: amondnet/vercel-action@v25
         with:
