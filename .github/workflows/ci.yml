@@ -26,13 +26,16 @@ jobs:
       - name: Install deps
         run: npm ci
 
-      # Genera Prisma Client para que el build no falle por @prisma/client
       - name: Prisma generate
         run: npx prisma generate
 
+      # (Opcional) también puedes forzar esto en build si lo prefieres
       - name: Build
+        env:
+          ROLLUP_SKIP_NODEJS_NATIVE: '1'
         run: npm run build
 
-      # Si no tienes tests todavía, esto no falla gracias a --if-present
       - name: Test
+        env:
+          ROLLUP_SKIP_NODEJS_NATIVE: '1'
         run: npm test --if-present
