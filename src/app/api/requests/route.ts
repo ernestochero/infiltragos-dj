@@ -21,15 +21,20 @@ export async function GET(req: NextRequest) {
       ],
     });
     return NextResponse.json(list);
-  } catch {
+  } catch (err) {
+    console.error('Error fetching requests:', err);
     return NextResponse.json({ error: 'Database error' }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
   const ip = req.ip ?? '0.0.0.0';
-  if (!rateLimit('req:' + ip, 1, 2 * 60 * 1000)) {
-    return NextResponse.json({ error: 'Rate limit' }, { status: 429 });
+  const limit = rateLimit('req:' + ip, 1, 2 * 60 * 1000);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: 'Rate limit', retry_after_seconds: Math.ceil(limit.retryAfterMs / 1000) },
+      { status: 429 },
+    );
   }
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
   if (!body) return NextResponse.json({ error: 'Bad JSON' }, { status: 400 });
@@ -61,7 +66,8 @@ export async function POST(req: NextRequest) {
       },
     });
     return NextResponse.json({ id: created.id });
-  } catch {
+  } catch (err) {
+    console.error('Error creating request:', err);
     return NextResponse.json({ error: 'Database error' }, { status: 500 });
   }
 }
