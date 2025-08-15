@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
+// Runtime y dinámica para evitar static optimization
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 const schema = z.object({
   username: z.string(),
   password: z.string(),
@@ -8,12 +13,8 @@ const schema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
-  }
+  const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
+  if (!body) return NextResponse.json({ error: 'Bad JSON' }, { status: 400 });
   const parse = schema.safeParse(body);
   if (!parse.success) {
     return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
@@ -38,4 +39,8 @@ export async function POST(req: NextRequest) {
     maxAge: rememberMe ? 60 * 60 * 24 * 30 : 60 * 60 * 12,
   });
   return res;
+}
+
+export async function GET() {
+  return NextResponse.json({ error: 'Method Not Allowed' }, { status: 405 });
 }
