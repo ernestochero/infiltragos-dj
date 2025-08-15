@@ -49,8 +49,8 @@ export default function QueuePage() {
   return (
     <main className="max-w-3xl mx-auto p-4 md:p-6">
       <header className="mb-6">
-        <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Music Queue</h1>
-        <p className="text-sm text-slate-500">Requests currently pending and what&apos;s playing now.</p>
+        <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Cola De Canciones</h1>
+        <p className="text-sm text-slate-500">Solicitudes actualmente pendientes y qué se está reproduciendo ahora.</p>
       </header>
 
       {/* Now Playing */}
@@ -66,10 +66,10 @@ export default function QueuePage() {
             <div className="flex items-center justify-between">
               <span className="inline-flex items-center gap-2 text-amber-900 font-semibold">
                 <span className="inline-block h-2.5 w-2.5 rounded-full bg-amber-500 animate-pulse" />
-                Now Playing
+                Reproduciendo
               </span>
               <span className="text-xs text-amber-900/70 font-medium">
-                👍 {nowPlaying.votes} votes
+                👍 {nowPlaying.votes} votos
               </span>
             </div>
             <p className="mt-2 text-lg md:text-xl font-bold text-amber-900">
@@ -94,7 +94,7 @@ export default function QueuePage() {
             id="pending-queue"
             className="text-xl font-extrabold text-slate-100 tracking-wide uppercase"
           >
-            Pending Requests
+            Solicitudes Pendientes
           </h2>
           <span className="text-xs text-slate-500">{pending?.length ?? 0} items</span>
         </div>
@@ -129,7 +129,7 @@ export default function QueuePage() {
                     )}
                   </div>
                   <span className="whitespace-nowrap text-xs font-medium text-slate-600">
-                    👍 {r.votes} votes
+                    👍 {r.votes} votos
                   </span>
                 </div>
               </li>
@@ -137,7 +137,7 @@ export default function QueuePage() {
           </ul>
         ) : (
           <div className="rounded-lg border border-slate-200 bg-white p-4 text-slate-500">
-            No pending requests.
+            Sin Solicitudes Pendientes.
           </div>
         )}
       </section>
