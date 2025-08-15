@@ -68,21 +68,60 @@ import type { Request, RequestStatus } from '@prisma/client';
     if (!fromCol || !toCol) return;
 
     if (fromCol !== toCol) {
+      // capture who was playing before the move
+      const prevPlayingTop = board.PLAYING[0];
+
       const rollback = optimisticUpdate((draft) => {
+        // remove from source column
         const fromItems = draft[fromCol];
         const idx = fromItems.findIndex((i) => i.id === active.id);
         const [item] = fromItems.splice(idx, 1);
+
+        // insert into destination column
         const toItems = draft[toCol];
         item.status = toCol;
         item.sortIndex = toItems.length;
         toItems.push(item);
+
+        // AUTO-ADVANCE:
+        // if we dropped into PLAYING and there was a previously playing item,
+        // move that previous one to DONE automatically
+        if (
+          toCol === 'PLAYING' &&
+          prevPlayingTop &&
+          prevPlayingTop.id !== String(active.id)
+        ) {
+          // remove previous playing from wherever it currently is in the draft
+          const prevIdx = draft.PLAYING.findIndex((r) => r.id === prevPlayingTop.id);
+          if (prevIdx !== -1) {
+            const [prev] = draft.PLAYING.splice(prevIdx, 1);
+            prev.status = 'DONE';
+            prev.sortIndex = draft.DONE.length;
+            draft.DONE.push(prev);
+          }
+        }
       });
+
       try {
+        // persist primary change (moved card)
         await fetch(`/api/requests/${active.id}/status`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: toCol, sortIndex: board[toCol].length }),
         });
+
+        // persist auto-advance if applicable
+        if (
+          toCol === 'PLAYING' &&
+          prevPlayingTop &&
+          prevPlayingTop.id !== String(active.id)
+        ) {
+          await fetch(`/api/requests/${prevPlayingTop.id}/status`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'DONE', sortIndex: board.DONE.length }),
+          });
+        }
       } catch {
         rollback();
       }

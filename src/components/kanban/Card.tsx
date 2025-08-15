@@ -18,7 +18,7 @@ export default function Card({ request }: { request: Request }) {
     <li
       ref={setNodeRef}
       style={style}
-      className="border p-2 rounded bg-slate-900 text-slate-100"
+      className="border p-2 rounded bg-slate-800 text-slate-100 hover:bg-slate-700 focus:bg-slate-700 focus:outline-none"
       {...attributes}
       {...listeners}
     >
