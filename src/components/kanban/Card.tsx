@@ -3,7 +3,12 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { Request } from '@prisma/client';
 
-export default function Card({ request }: { request: Request }) {
+interface CardProps {
+  request: Request;
+  onClick?: () => void;
+}
+
+export default function Card({ request, onClick }: CardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: request.id });
 
@@ -18,6 +23,7 @@ export default function Card({ request }: { request: Request }) {
     <li
       ref={setNodeRef}
       style={style}
+      onClick={onClick}
       className="border p-2 rounded bg-slate-800 text-slate-100 hover:bg-slate-700 focus:bg-slate-700 focus:outline-none"
       {...attributes}
       {...listeners}
