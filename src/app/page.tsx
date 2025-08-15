@@ -1,11 +1,15 @@
 'use client';
 import { useState } from 'react';
 import { z } from 'zod';
+import SongAutocomplete from '@/components/song-autocomplete';
+import { TrackSuggestion } from '@/types/spotify';
 
 const schema = z.object({
   song_title: z.string().min(1, 'La canción es obligatoria').max(100, 'Máx. 100 caracteres'),
   artist: z.string().min(1, 'El artista es obligatorio').max(100, 'Máx. 100 caracteres'),
   table_or_name: z.string().max(50, 'Máx. 50 caracteres').optional().or(z.literal('')),
+  track_id: z.string().optional(),
+  track_uri: z.string().optional(),
 });
 
 type FormDataShape = z.infer<typeof schema>;
@@ -115,17 +119,14 @@ export default function RequestForm() {
               <label htmlFor="song_title" className="block text-sm font-medium text-slate-200 mb-1">
                 Canción
               </label>
-              <input
-                id="song_title"
-                name="song_title"
+              <SongAutocomplete
                 value={values.song_title}
-                onChange={(e) => onChange('song_title', e.target.value)}
-                placeholder="Ej. Blinding Lights"
-                className="w-full rounded-lg border border-slate-700 bg-slate-800 text-slate-100 placeholder-slate-400 px-3 py-2 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-600"
-                required
-                maxLength={100}
+                onValueChange={(v) => onChange('song_title', v)}
+                onArtistChange={(v) => onChange('artist', v)}
+                onTrackSelect={(t: TrackSuggestion | null) =>
+                  setValues((prev) => ({ ...prev, track_id: t?.id, track_uri: t?.uri }))
+                }
                 disabled={disabled}
-                autoComplete="off"
               />
               {errors.song_title && (
                 <p className="mt-1 text-xs text-rose-300">{errors.song_title}</p>
