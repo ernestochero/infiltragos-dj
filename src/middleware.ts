@@ -5,10 +5,10 @@ export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const isAdminRoute = pathname.startsWith('/admin');
   const isRequestsRoute = pathname.startsWith('/api/requests');
-  const isPublicRequestsGet =
-    isRequestsRoute && req.method === 'GET' && pathname === '/api/requests';
+  const isPublicRequest =
+    isRequestsRoute && pathname === '/api/requests' && ['GET', 'POST'].includes(req.method);
 
-  if (isPublicRequestsGet) {
+  if (isPublicRequest) {
     return NextResponse.next();
   }
 
