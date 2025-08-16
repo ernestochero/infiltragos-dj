@@ -7,6 +7,7 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  DragOverlay,
 } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import Column from '@/components/kanban/Column';
@@ -26,6 +27,14 @@ import type { Request, RequestStatus } from '@prisma/client';
      .slice(0, 10);
  };
 
+const findById = (board: BoardState, id: string) => {
+  for (const s of STATUSES) {
+    const f = board[s].find((r) => r.id === id);
+    if (f) return f;
+  }
+  return null;
+};
+
 export default function AdminPage() {
   const router = useRouter();
   const [board, setBoard] = useState<BoardState>({
@@ -34,6 +43,7 @@ export default function AdminPage() {
      DONE: [],
      REJECTED: [],
    });
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -223,7 +233,12 @@ export default function AdminPage() {
           Logout
         </button>
       </div>
-      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+      <DndContext
+        sensors={sensors}
+        onDragStart={(e) => setActiveId(String(e.active.id))}
+        onDragCancel={() => setActiveId(null)}
+        onDragEnd={(e) => { setActiveId(null); handleDragEnd(e); }}
+      >
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
           {STATUSES.map((status) => (
             <Column
@@ -235,6 +250,18 @@ export default function AdminPage() {
             />
           ))}
         </div>
+        <DragOverlay
+          dropAnimation={{ duration: 280, easing: 'cubic-bezier(0.2, 0.8, 0, 1)' }}
+        >
+          {activeId ? (
+            <div className="rounded bg-slate-700 text-white px-3 py-2 shadow-lg">
+              {(() => {
+                const it = findById(board, activeId!);
+                return it ? `${it.songTitle} — ${it.artist}` : 'Moviendo…';
+              })()}
+            </div>
+          ) : null}
+        </DragOverlay>
       </DndContext>
     </main>
   );
