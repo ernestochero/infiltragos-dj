@@ -1,6 +1,7 @@
 'use client';
 import useSWR from 'swr';
 import { useMemo } from 'react';
+import Link from 'next/link';
 
 type RequestStatus = 'PENDING' | 'PLAYING' | 'DONE' | 'REJECTED';
 
@@ -48,6 +49,14 @@ export default function QueuePage() {
         <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Cola De Canciones</h1>
         <p className="text-sm text-slate-500">Solicitudes actualmente pendientes y qué se está reproduciendo ahora.</p>
       </header>
+      <div className="mb-6 flex justify-center">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 rounded-md bg-amber-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-amber-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500 transition"
+        >
+          🎵 Pedir una Canción
+        </Link>
+      </div>
 
       {/* Now Playing */}
       <section aria-labelledby="now-playing" className="mb-6">

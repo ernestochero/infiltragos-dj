@@ -1,6 +1,7 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { z } from 'zod';
+import Link from 'next/link';
 import SongAutocomplete from '@/components/song-autocomplete';
 import { TrackSuggestion } from '@/types/spotify';
 
@@ -23,6 +24,7 @@ export default function RequestForm() {
   const [state, setState] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [globalError, setGlobalError] = useState<string>('');
+  const [redirectIn, setRedirectIn] = useState(2);
 
   function onChange<K extends keyof FormDataShape>(key: K, v: string) {
     setValues((prev) => ({ ...prev, [key]: v }));
@@ -73,15 +75,26 @@ export default function RequestForm() {
         return;
       }
       setState('success');
-      // opcional: limpiar y redirigir con un pequeño delay para ver el mensaje
-      setTimeout(() => {
-        window.location.href = '/queue';
-      }, 600);
     } catch {
       setGlobalError('Hubo un problema al enviar tu pedido. Intenta nuevamente.');
       setState('idle');
     }
   }
+
+  useEffect(() => {
+    if (state !== 'success') return;
+    setRedirectIn(2);
+    const interval = setInterval(() => {
+      setRedirectIn((s) => (s > 0 ? s - 1 : s));
+    }, 1000);
+    const timeout = setTimeout(() => {
+      window.location.href = '/queue';
+    }, 2000);
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timeout);
+    };
+  }, [state]);
 
   const disabled = state === 'submitting';
 
@@ -99,94 +112,119 @@ export default function RequestForm() {
 
         {state === 'success' ? (
           <div className="rounded-lg border border-emerald-400/30 bg-emerald-500/10 p-4 text-emerald-300">
-            ¡Listo! Tu pedido fue enviado. Redirigiendo a la cola…
+            <div className="flex items-center gap-2">
+              <svg className="h-5 w-5 text-emerald-300" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-7.25 7.25a1 1 0 01-1.414 0l-3-3a1 1 0 111.414-1.414l2.293 2.293 6.543-6.543a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+              <span>¡Listo! Tu pedido fue enviado. Redirigiendo a la cola en {redirectIn}…</span>
+            </div>
           </div>
         ) : (
-          <form
-            onSubmit={handleSubmit}
-            className="rounded-xl border border-slate-700/60 bg-slate-900/60 backdrop-blur p-6 shadow-xl space-y-4"
-          >
-            {globalError && (
-              <p
-                role="alert"
-                className="rounded-md border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-sm text-rose-300"
-              >
-                {globalError}
-              </p>
-            )}
-
-            <div>
-              <label htmlFor="song_title" className="block text-sm font-medium text-slate-200 mb-1">
-                Canción
-              </label>
-              <SongAutocomplete
-                value={values.song_title}
-                onValueChange={(v) => onChange('song_title', v)}
-                onArtistChange={(v) => onChange('artist', v)}
-                onTrackSelect={(t: TrackSuggestion | null) =>
-                  setValues((prev) => ({ ...prev, track_id: t?.id, track_uri: t?.uri }))
-                }
-                disabled={disabled}
-              />
-              {errors.song_title && (
-                <p className="mt-1 text-xs text-rose-300">{errors.song_title}</p>
-              )}
-            </div>
-
-            <div>
-              <label htmlFor="artist" className="block text-sm font-medium text-slate-200 mb-1">
-                Artista
-              </label>
-              <input
-                id="artist"
-                name="artist"
-                value={values.artist}
-                onChange={(e) => onChange('artist', e.target.value)}
-                placeholder="Ej. The Weeknd"
-                className="w-full rounded-lg border border-slate-700 bg-slate-800 text-slate-100 placeholder-slate-400 px-3 py-2 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-600"
-                required
-                maxLength={100}
-                disabled={disabled}
-                autoComplete="off"
-              />
-              {errors.artist && <p className="mt-1 text-xs text-rose-300">{errors.artist}</p>}
-            </div>
-
-            <div>
-              <label
-                htmlFor="table_or_name"
-                className="block text-sm font-medium text-slate-200 mb-1"
-              >
-                Mesa o nombre <span className="text-slate-400">(opcional)</span>
-              </label>
-              <input
-                id="table_or_name"
-                name="table_or_name"
-                value={values.table_or_name}
-                onChange={(e) => onChange('table_or_name', e.target.value)}
-                placeholder="Ej. Mesa 12"
-                className="w-full rounded-lg border border-slate-700 bg-slate-800 text-slate-100 placeholder-slate-400 px-3 py-2 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-600"
-                maxLength={50}
-                disabled={disabled}
-                autoComplete="off"
-              />
-              {errors.table_or_name && (
-                <p className="mt-1 text-xs text-rose-300">{errors.table_or_name}</p>
-              )}
-            </div>
-
-            <button
-              className="w-full bg-blue-600 hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400 text-white px-4 py-2.5 rounded-lg font-semibold disabled:opacity-70 disabled:cursor-not-allowed"
-              disabled={disabled}
-              type="submit"
+          <>
+            <form
+              onSubmit={handleSubmit}
+              className="rounded-xl border border-slate-700/60 bg-slate-900/60 backdrop-blur p-6 shadow-xl space-y-4"
             >
-              {state === 'submitting' ? 'Enviando…' : 'Enviar'}
-            </button>
+              {globalError && (
+                <p
+                  role="alert"
+                  className="rounded-md border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-sm text-rose-300"
+                >
+                  {globalError}
+                </p>
+              )}
 
-            <p className="text-xs text-slate-500 text-center">
-              Al enviar aceptas que tu solicitud puede mostrarse en la pantalla del DJ.
-            </p>
-          </form>
+              <div>
+                <label htmlFor="song_title" className="block text-sm font-medium text-slate-200 mb-1">
+                  Canción
+                </label>
+                <SongAutocomplete
+                  value={values.song_title}
+                  onValueChange={(v) => onChange('song_title', v)}
+                  onArtistChange={(v) => onChange('artist', v)}
+                  onTrackSelect={(t: TrackSuggestion | null) =>
+                    setValues((prev) => ({ ...prev, track_id: t?.id, track_uri: t?.uri }))
+                  }
+                  disabled={disabled}
+                />
+                {errors.song_title && (
+                  <p className="mt-1 text-xs text-rose-300">{errors.song_title}</p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="artist" className="block text-sm font-medium text-slate-200 mb-1">
+                  Artista
+                </label>
+                <input
+                  id="artist"
+                  name="artist"
+                  value={values.artist}
+                  onChange={(e) => onChange('artist', e.target.value)}
+                  placeholder="Ej. The Weeknd"
+                  className="w-full rounded-lg border border-slate-700 bg-slate-800 text-slate-100 placeholder-slate-400 px-3 py-2 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-600"
+                  required
+                  maxLength={100}
+                  disabled={disabled}
+                  autoComplete="off"
+                />
+                {errors.artist && <p className="mt-1 text-xs text-rose-300">{errors.artist}</p>}
+              </div>
+
+              <div>
+                <label
+                  htmlFor="table_or_name"
+                  className="block text-sm font-medium text-slate-200 mb-1"
+                >
+                  Mesa o nombre <span className="text-slate-400">(opcional)</span>
+                </label>
+                <input
+                  id="table_or_name"
+                  name="table_or_name"
+                  value={values.table_or_name}
+                  onChange={(e) => onChange('table_or_name', e.target.value)}
+                  placeholder="Ej. Mesa 12"
+                  className="w-full rounded-lg border border-slate-700 bg-slate-800 text-slate-100 placeholder-slate-400 px-3 py-2 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-600"
+                  maxLength={50}
+                  disabled={disabled}
+                  autoComplete="off"
+                />
+                {errors.table_or_name && (
+                  <p className="mt-1 text-xs text-rose-300">{errors.table_or_name}</p>
+                )}
+              </div>
+
+              <button
+                className="w-full bg-blue-600 hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400 text-white px-4 py-2.5 rounded-lg font-semibold disabled:opacity-70 disabled:cursor-not-allowed"
+                disabled={disabled}
+                type="submit"
+              >
+                {state === 'submitting' ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden>
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                    </svg>
+                    Enviando…
+                  </span>
+                ) : (
+                  'Enviar'
+                )}
+              </button>
+
+              <p className="text-xs text-slate-500 text-center">
+                Al enviar aceptas que tu solicitud puede mostrarse en la pantalla del DJ.
+              </p>
+            </form>
+            <div className="mt-4 flex justify-center">
+              <Link
+                href="/queue"
+                className="text-sm font-medium text-blue-400 hover:text-blue-300 transition"
+              >
+                Ver la cola de canciones →
+              </Link>
+            </div>
+          </>
         )}
       </div>
     </main>
