@@ -24,8 +24,16 @@ export default function SongAutocomplete({
   const [error, setError] = useState('');
   const [highlight, setHighlight] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
+  const suppressNextFetchRef = useRef(false);
 
   useEffect(() => {
+    // Skip one fetch cycle right after selecting a suggestion (we set the input to the selected track name)
+    if (suppressNextFetchRef.current) {
+      suppressNextFetchRef.current = false;
+      setOpen(false);
+      setSuggestions([]);
+      return;
+    }
     if (value.length < 2) {
       setSuggestions([]);
       setOpen(false);
@@ -60,6 +68,7 @@ export default function SongAutocomplete({
   }, [value]);
 
   function select(track: TrackSuggestion) {
+    suppressNextFetchRef.current = true;
     onValueChange(track.name);
     onArtistChange(track.artist);
     onTrackSelect(track);
@@ -68,7 +77,7 @@ export default function SongAutocomplete({
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (!open) return;
+    if (!open || suggestions.length === 0) return;
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       setHighlight((h) => (h + 1) % suggestions.length);
