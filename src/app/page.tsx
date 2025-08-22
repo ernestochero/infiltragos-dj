@@ -183,7 +183,7 @@ export default function RequestForm() {
                   name="table_or_name"
                   value={values.table_or_name}
                   onChange={(e) => onChange('table_or_name', e.target.value)}
-                  placeholder="Ej. Mesa 12"
+                  placeholder="Ej. Mesa 2 o Box 4"
                   className="w-full rounded-lg border border-slate-700 bg-slate-800 text-slate-100 placeholder-slate-400 px-3 py-2 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-600"
                   maxLength={50}
                   disabled={disabled}

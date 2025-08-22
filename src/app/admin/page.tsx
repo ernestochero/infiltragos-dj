@@ -16,6 +16,13 @@ import type { Request, RequestStatus } from '@prisma/client';
  type BoardState = Record<RequestStatus, Request[]>;
  const STATUSES: RequestStatus[] = ['PENDING', 'PLAYING', 'DONE', 'REJECTED'];
 
+const STATUS_LABELS: Record<RequestStatus, string> = {
+  PENDING: 'PENDIENTES',
+  PLAYING: 'REPRODUCIENDO',
+  DONE: 'COMPLETADAS',
+  REJECTED: 'RECHAZADAS',
+};
+
  const filterRecentDone = (list: Request[]) => {
    const cutoff = Date.now() - 60 * 60 * 1000;
    return list
@@ -243,7 +250,7 @@ export default function AdminPage() {
           {STATUSES.map((status) => (
             <Column
               key={status}
-              title={status}
+              title={STATUS_LABELS[status]}
               status={status}
               items={board[status]}
               onItemClick={status === 'PENDING' ? handleCardClick : undefined}
@@ -257,7 +264,9 @@ export default function AdminPage() {
             <div className="rounded bg-slate-700 text-white px-3 py-2 shadow-lg">
               {(() => {
                 const it = findById(board, activeId!);
-                return it ? `${it.songTitle} — ${it.artist}` : 'Moviendo…';
+                return it
+                  ? `${it.songTitle} — ${it.artist}${it.tableOrName ? ` · ${it.tableOrName}` : ''}`
+                  : 'Moviendo…';
               })()}
             </div>
           ) : null}

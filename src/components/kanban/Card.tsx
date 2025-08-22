@@ -29,6 +29,9 @@ export default function Card({ request, onClick }: CardProps) {
       {...listeners}
     >
       {request.songTitle} - {request.artist} - Votes ({request.votes})
+      {request.tableOrName && (
+        <span className="text-xs text-slate-400"> · {request.tableOrName}</span>
+      )}
     </li>
   );
 }
