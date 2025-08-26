@@ -162,7 +162,11 @@ export default function QueuePage() {
           </div>
         )}
       </section>
-      <Modal open={open} onClose={() => setOpen(false)}>
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        titleId="request-form-title"
+      >
         <RequestForm onSuccess={handleSuccess} />
       </Modal>
       {toast && (

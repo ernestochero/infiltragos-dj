@@ -92,7 +92,10 @@ export default function RequestForm({ onSuccess }: Props) {
   return (
     <div>
       <header className="mb-6 text-left md:text-center">
-        <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-100">
+        <h1
+          id="request-form-title"
+          className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-100"
+        >
           Pide tu canción <span aria-hidden>🎵</span>
         </h1>
         <p className="mt-1 text-slate-400 text-sm">
