@@ -1,14 +1,15 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 interface ModalProps {
   open: boolean;
   onClose: () => void;
   children: React.ReactNode;
+  titleId?: string;
 }
 
-export default function Modal({ open, onClose, children }: ModalProps) {
+export default function Modal({ open, onClose, children, titleId }: ModalProps) {
   const boxRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -51,20 +52,43 @@ export default function Modal({ open, onClose, children }: ModalProps) {
   if (!open) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
+    <div className="fixed inset-0 z-50">
       <div className="fixed inset-0 bg-black/60" />
-      <div className="fixed inset-0 grid place-items-center p-4">
+      <div
+        className="fixed inset-0 grid place-items-center p-4"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) onClose();
+        }}
+      >
         <div
           ref={boxRef}
           role="dialog"
           aria-modal="true"
-          className="w-full max-w-md rounded-lg bg-slate-900 text-white p-4 shadow-lg"
+          aria-labelledby={titleId}
+          className="relative w-full max-w-md rounded-lg bg-slate-900 text-white p-4 shadow-lg"
         >
+          <button
+            type="button"
+            aria-label="Cerrar"
+            onClick={onClose}
+            className="absolute top-2 right-2 rounded-md text-slate-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-slate-500"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <line x1="4" y1="4" x2="16" y2="16" />
+              <line x1="16" y1="4" x2="4" y2="16" />
+            </svg>
+          </button>
           {children}
         </div>
       </div>
