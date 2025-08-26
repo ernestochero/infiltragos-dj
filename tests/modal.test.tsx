@@ -52,7 +52,8 @@ describe('Modal', () => {
     trigger.focus();
     fireEvent.click(trigger);
 
-    const closeBtn = screen.getByLabelText('Cerrar');
+    const dialog = screen.getByRole('dialog');
+    const closeBtn = dialog.querySelector('button');
     expect(closeBtn).toHaveFocus();
     expect(document.body.style.overflow).toBe('hidden');
 
