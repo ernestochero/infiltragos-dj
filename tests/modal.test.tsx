@@ -53,7 +53,7 @@ describe('Modal', () => {
     fireEvent.click(trigger);
 
     const dialog = screen.getByRole('dialog');
-    const closeBtn = dialog.querySelector('button');
+    const closeBtn = dialog.querySelector('button') as HTMLButtonElement;
     expect(closeBtn).toHaveFocus();
     expect(document.body.style.overflow).toBe('hidden');
 
