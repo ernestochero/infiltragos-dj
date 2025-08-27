@@ -23,7 +23,7 @@ export default function LoginPage() {
         body: JSON.stringify({ username, password, rememberMe }),
       });
       if (res.ok) {
-        router.push('/admin');
+        router.push('/dj/admin');
       } else if (res.status === 401) {
         setError('Invalid username or password');
       } else {

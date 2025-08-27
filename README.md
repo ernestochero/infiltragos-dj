@@ -34,8 +34,8 @@ npm test
 ## Environment
 Copy `.env.example` to `.env` and fill in values for database and realtime providers.
 
-Set `DJ_ADMIN_USER` and `DJ_ADMIN_PASSWORD` to control access to the `/admin` area.
-Log in at `/login` with those credentials to receive the admin cookie and be redirected to `/admin`. Use the "Logout" button in `/admin` to clear the session.
+Set `DJ_ADMIN_USER` and `DJ_ADMIN_PASSWORD` to control access to the `/dj/admin` area.
+Log in at `/dj/login` with those credentials to receive the admin cookie and be redirected to `/dj/admin`. Use the "Logout" button in `/dj/admin` to clear the session.
 
 ### Manual tests
 - Dragging a card between columns persists the new status.
@@ -50,12 +50,12 @@ The codebase is organized in a light multi-module layout.
 
 - Shared utilities live under `src/core` and can be imported with the `@core` alias.
 - The DJ feature set lives under `src/modules/dj` and is available via the `@dj` alias.
-- Public routes and APIs re-export the module implementations so existing URLs like `/login`, `/admin` and `/api/requests` remain unchanged.
+- The DJ routes are mounted under `/dj`; legacy URLs like `/`, `/admin`, `/login` and `/queue` redirect to the new paths.
 
 ### Adding new modules
 
-Create a folder under `src/modules/<name>` and mount any pages or API handlers by re-exporting them from `src/app` just like the DJ module does. Examples: `src/modules/whatsapp`, `src/modules/google`.
+Create a folder under `src/modules/<name>` and mount any pages or API handlers under `src/app/<name>` using the desired route. Examples: `src/modules/whatsapp`, `src/modules/google`.
 
 ### DJ services
 
-The DJ module exposes its API handlers in `src/modules/dj/app/api` and UI components under `src/modules/dj/components`.
+The DJ module exposes its API handlers in `src/app/api` and UI components under `src/modules/dj/components`.

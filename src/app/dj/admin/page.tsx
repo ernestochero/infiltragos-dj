@@ -221,7 +221,7 @@ export default function AdminPage() {
 
   const handleLogout = async () => {
     await fetch('/api/logout', { method: 'POST' });
-    router.push('/login');
+    router.push('/dj/login');
   };
 
   return (
