@@ -197,6 +197,7 @@ export default function AdminPage() {
       }
 
       draft.DONE = filterRecent(draft.DONE);
+      draft.REJECTED = filterRecent(draft.REJECTED);
     });
 
     try {
