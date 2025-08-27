@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   } catch (err) {
     // Avoid leaking errors during build/collect; return a clean 500
-    return NextResponse.json({ error: 'Database error' + err }, { status: 500 });
+    return NextResponse.json({ error: 'Database error: ' + (err instanceof Error ? err.message : 'Unknown error') }, { status: 500 });
   }
 }
 
