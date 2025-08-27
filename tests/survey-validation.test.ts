@@ -4,8 +4,28 @@ import { SurveyResponseSchema, normalizeAnswers, Question } from '@survey/lib/va
 const questions: Question[] = [
   { id: 'q1', type: 'SHORT_TEXT', label: 'Name', order: 0, required: true },
   { id: 'q2', type: 'EMAIL', label: 'Email', order: 1, required: false },
-  { id: 'q3', type: 'SINGLE_CHOICE', label: 'Color', order: 2, required: true, options: ['red', 'blue'] },
-  { id: 'q4', type: 'MULTIPLE_CHOICE', label: 'Fruits', order: 3, required: false, options: ['apple', 'banana'] },
+  {
+    id: 'q3',
+    type: 'SINGLE_CHOICE',
+    label: 'Color',
+    order: 2,
+    required: true,
+    options: [
+      { id: 'o1', label: 'Red', value: 'red', order: 0 },
+      { id: 'o2', label: 'Blue', value: 'blue', order: 1 },
+    ],
+  },
+  {
+    id: 'q4',
+    type: 'MULTIPLE_CHOICE',
+    label: 'Fruits',
+    order: 3,
+    required: false,
+    options: [
+      { id: 'o3', label: 'Apple', value: 'apple', order: 0 },
+      { id: 'o4', label: 'Banana', value: 'banana', order: 1 },
+    ],
+  },
 ];
 
 describe('SurveyResponseSchema', () => {
@@ -27,5 +47,12 @@ describe('SurveyResponseSchema', () => {
     );
     expect(normalized.q3).toBe('red');
     expect(normalized.q4).toEqual(['banana']);
+  });
+
+  it('enforces required multiple choice to be non empty', () => {
+    const schema = SurveyResponseSchema([
+      { ...questions[3], required: true },
+    ]);
+    expect(() => schema.parse({ q4: [] })).toThrow();
   });
 });
