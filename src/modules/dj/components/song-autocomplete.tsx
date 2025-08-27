@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { TrackSuggestion } from '@/types/spotify';
+import { TrackSuggestion } from '@dj/types/spotify';
 
 interface Props {
   value: string;

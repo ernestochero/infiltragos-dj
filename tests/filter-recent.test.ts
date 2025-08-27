@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { filterRecent } from '../src/lib/filterRecent';
+import { filterRecent } from '@dj/lib/filterRecent';
 import type { Request } from '@prisma/client';
 
 describe('filterRecent', () => {

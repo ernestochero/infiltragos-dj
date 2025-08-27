@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { render, fireEvent, screen, cleanup } from '@testing-library/react';
-import Modal from '../src/components/modal';
+import Modal from '@dj/components/modal';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 

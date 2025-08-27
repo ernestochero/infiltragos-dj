@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { z } from 'zod';
-import SongAutocomplete from '@/components/song-autocomplete';
-import { TrackSuggestion } from '@/types/spotify';
+import SongAutocomplete from '@dj/components/song-autocomplete';
+import { TrackSuggestion } from '@dj/types/spotify';
 
 const schema = z.object({
   song_title: z.string().min(1, 'La canción es obligatoria').max(100, 'Máx. 100 caracteres'),

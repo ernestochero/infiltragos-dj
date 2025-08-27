@@ -21,6 +21,12 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@core/*": [
+        "./src/core/*"
+      ],
+      "@dj/*": [
+        "./src/modules/dj/*"
       ]
     },
     "incremental": true,

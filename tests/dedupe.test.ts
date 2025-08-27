@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { findDuplicate, Request } from '../src/lib/dedupe';
+import { findDuplicate, Request } from '@dj/lib/dedupe';
 
 describe('findDuplicate', () => {
   it('finds duplicate within window', () => {

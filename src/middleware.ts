@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { hasAdminCookie } from '@/lib/auth';
+import { hasAdminCookie } from '@core/api/auth';
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
