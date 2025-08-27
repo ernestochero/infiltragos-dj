@@ -73,7 +73,7 @@ export async function DELETE(req: NextRequest, { params }: Context) {
   try {
     const survey = await prisma.survey.update({
       where: { id: params.id },
-      data: { status: 'ARCHIVED' },
+      data: { status: SurveyStatus.ARCHIVED },
     });
     return NextResponse.json(survey);
   } catch (err) {
