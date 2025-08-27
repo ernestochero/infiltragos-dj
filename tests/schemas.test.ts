@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { requestSchema } from '../src/lib/schemas';
+import { requestSchema } from '@dj/lib/schemas';
 
 describe('requestSchema', () => {
   it('validates data', () => {

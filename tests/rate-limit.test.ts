@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { rateLimit, rateLimitByRequest } from '../src/lib/rate-limit';
+import { rateLimit, rateLimitByRequest } from '@core/api/rate-limit';
 import type { NextRequest } from 'next/server';
-import { ADMIN_COOKIE } from '../src/lib/auth';
+import { ADMIN_COOKIE } from '@core/api/auth';
 
 describe('rate-limit utilities', () => {
   describe('rateLimit', () => {

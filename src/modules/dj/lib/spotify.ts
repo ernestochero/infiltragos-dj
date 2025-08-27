@@ -1,4 +1,4 @@
-import { TrackSuggestion } from '@/types/spotify';
+import { TrackSuggestion } from '@dj/types/spotify';
 
 let cachedToken: { token: string; expires: number } | null = null;
 

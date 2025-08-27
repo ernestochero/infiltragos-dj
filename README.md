@@ -43,3 +43,19 @@ Log in at `/login` with those credentials to receive the admin cookie and be red
 
 ## Deployment
 Deploy on Vercel and connect to a PostgreSQL database (e.g. Supabase).
+
+## Module structure
+
+The codebase is organized in a light multi-module layout.
+
+- Shared utilities live under `src/core` and can be imported with the `@core` alias.
+- The DJ feature set lives under `src/modules/dj` and is available via the `@dj` alias.
+- Public routes and APIs re-export the module implementations so existing URLs like `/login`, `/admin` and `/api/requests` remain unchanged.
+
+### Adding new modules
+
+Create a folder under `src/modules/<name>` and mount any pages or API handlers by re-exporting them from `src/app` just like the DJ module does. Examples: `src/modules/whatsapp`, `src/modules/google`.
+
+### DJ services
+
+The DJ module exposes its API handlers in `src/modules/dj/app/api` and UI components under `src/modules/dj/components`.
