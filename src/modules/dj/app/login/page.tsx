@@ -30,7 +30,7 @@ export default function LoginPage() {
         setError('Login failed');
       }
     } catch (err) {
-      setError('Network error' + err);
+      setError('Network error: ' + (err instanceof Error ? err.message : 'Unknown error'));
     } finally {
       setLoading(false);
     }
