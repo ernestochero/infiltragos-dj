@@ -12,6 +12,7 @@ import {
 import { arrayMove } from '@dnd-kit/sortable';
 import Column from '@/components/kanban/Column';
 import type { Request, RequestStatus } from '@prisma/client';
+import { filterRecent } from '@/lib/filterRecent';
 
  type BoardState = Record<RequestStatus, Request[]>;
  const STATUSES: RequestStatus[] = ['PENDING', 'PLAYING', 'DONE', 'REJECTED'];
@@ -23,16 +24,6 @@ const STATUS_LABELS: Record<RequestStatus, string> = {
   REJECTED: 'RECHAZADAS',
 };
 
- const filterRecentDone = (list: Request[]) => {
-   const cutoff = Date.now() - 60 * 60 * 1000;
-   return list
-     .filter((r) => new Date(r.updatedAt).getTime() >= cutoff)
-     .sort(
-       (a, b) =>
-         new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-     )
-     .slice(0, 10);
- };
 
 const findById = (board: BoardState, id: string) => {
   for (const s of STATUSES) {
@@ -74,7 +65,8 @@ export default function AdminPage() {
     for (const item of list) {
       grouped[item.status].push(item);
     }
-    grouped.DONE = filterRecentDone(grouped.DONE);
+    grouped.DONE = filterRecent(grouped.DONE);
+    grouped.REJECTED = filterRecent(grouped.REJECTED);
     setBoard(grouped);
   };
 
@@ -134,7 +126,8 @@ export default function AdminPage() {
           }
         }
 
-        draft.DONE = filterRecentDone(draft.DONE);
+        draft.DONE = filterRecent(draft.DONE);
+        draft.REJECTED = filterRecent(draft.REJECTED);
       });
 
       try {
@@ -203,7 +196,8 @@ export default function AdminPage() {
         }
       }
 
-      draft.DONE = filterRecentDone(draft.DONE);
+      draft.DONE = filterRecent(draft.DONE);
+      draft.REJECTED = filterRecent(draft.REJECTED);
     });
 
     try {
