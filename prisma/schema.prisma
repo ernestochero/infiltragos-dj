@@ -35,6 +35,57 @@ model User {
   role UserRole
 }
 
+model Survey {
+  id            String           @id @default(cuid())
+  name          String
+  slug          String           @unique
+  description   String?
+  status        SurveyStatus     @default(DRAFT)
+  effectiveFrom DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  questions     SurveyQuestion[]
+  responses     SurveyResponse[]
+}
+
+model SurveyQuestion {
+  id        String       @id @default(cuid())
+  surveyId  String
+  survey    Survey       @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  type      QuestionType
+  label     String
+  required  Boolean      @default(false)
+  order     Int
+  helpText  String?
+  options   Json?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+}
+
+model SurveyResponse {
+  id        String   @id @default(cuid())
+  surveyId  String
+  survey    Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  answers   Json
+  completed Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+enum SurveyStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum QuestionType {
+  SHORT_TEXT
+  LONG_TEXT
+  EMAIL
+  PHONE
+  DATE
+  SINGLE_CHOICE
+  MULTIPLE_CHOICE
+}
+
 enum RequestStatus {
   PENDING
   PLAYING
