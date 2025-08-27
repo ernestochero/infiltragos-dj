@@ -10,15 +10,33 @@ export const QuestionTypeEnum = z.enum([
   'MULTIPLE_CHOICE',
 ]);
 
-export const QuestionSchema = z.object({
+const OptionSchema = z.object({
   id: z.string().optional(),
-  type: QuestionTypeEnum,
   label: z.string().min(1),
-  required: z.boolean().optional().default(false),
+  value: z.string().min(1),
   order: z.number().int(),
-  helpText: z.string().optional(),
-  options: z.array(z.string()).optional(),
 });
+
+export const QuestionSchema = z
+  .object({
+    id: z.string().optional(),
+    type: QuestionTypeEnum,
+    label: z.string().min(1),
+    required: z.boolean().optional().default(false),
+    order: z.number().int(),
+    helpText: z.string().optional(),
+    options: z.array(OptionSchema).optional(),
+  })
+  .refine(
+    q =>
+      ['SINGLE_CHOICE', 'MULTIPLE_CHOICE'].includes(q.type)
+        ? Array.isArray(q.options) && q.options.length >= 2
+        : !q.options?.length,
+    {
+      message: 'Choice questions must have at least two options',
+      path: ['options'],
+    },
+  );
 
 export const SurveyUpsertSchema = z.object({
   name: z.string().min(1),
@@ -50,17 +68,20 @@ export function SurveyResponseSchema(questions: Question[]) {
         schema = z.coerce.date();
         break;
       case 'SINGLE_CHOICE':
-        schema = z.string().refine(val => !q.options || q.options.includes(val), {
-          message: 'Invalid option',
-        });
+        schema = z.string().refine(
+          val => !q.options || q.options.some(o => o.value === val),
+          { message: 'Invalid option' },
+        );
         break;
-      case 'MULTIPLE_CHOICE':
-        schema = z.array(z.string()).refine(arr =>
-          !q.options || arr.every(v => q.options!.includes(v)),
-        {
-          message: 'Invalid option',
-        });
+      case 'MULTIPLE_CHOICE': {
+        let arrSchema = z.array(z.string());
+        if (q.required) arrSchema = arrSchema.min(1);
+        schema = arrSchema.refine(
+          arr => !q.options || arr.every(v => q.options!.some(o => o.value === v)),
+          { message: 'Invalid option' },
+        );
         break;
+      }
       default:
         schema = z.any();
     }
