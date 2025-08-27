@@ -5,6 +5,8 @@ export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const isAdminRoute = pathname.startsWith('/dj/admin');
   const isRequestsRoute = pathname.startsWith('/api/requests');
+  const isSurveyRoute = pathname.startsWith('/survey');
+  const isSurveyApiRoute = pathname.startsWith('/api/surveys');
   const isPublicRequest =
     isRequestsRoute && pathname === '/api/requests' && ['GET', 'POST'].includes(req.method);
 
@@ -12,11 +14,11 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  if (isAdminRoute || isRequestsRoute) {
+  if (isAdminRoute || isRequestsRoute || isSurveyRoute || isSurveyApiRoute) {
     if (hasAdminCookie(req)) {
       return NextResponse.next();
     }
-    if (isAdminRoute) {
+    if (isAdminRoute || isSurveyRoute) {
       return NextResponse.redirect(new URL('/dj/login', req.url));
     }
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -26,5 +28,12 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dj/admin', '/dj/admin/:path*', '/api/requests/:path*'],
+  matcher: [
+    '/dj/admin',
+    '/dj/admin/:path*',
+    '/api/requests/:path*',
+    '/survey',
+    '/survey/:path*',
+    '/api/surveys/:path*',
+  ],
 };

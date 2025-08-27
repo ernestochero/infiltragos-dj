@@ -42,7 +42,7 @@ export const SurveyUpsertSchema = z.object({
   name: z.string().min(1),
   slug: z.string().min(1),
   description: z.string().optional(),
-  status: z.enum(['DRAFT', 'PUBLISHED']).default('DRAFT'),
+  status: z.enum(['DRAFT', 'PUBLISHED', 'ARCHIVED']).default('DRAFT'),
   effectiveFrom: z.coerce.date().optional(),
   questions: z.array(QuestionSchema),
 });

@@ -1,5 +1,1 @@
-import SurveyIndexPage from '@survey/pages/index';
-
-export default function SurveyPage() {
-  return <SurveyIndexPage />;
-}
+export { default } from '@survey/app/survey/page';
