@@ -16,6 +16,7 @@ export default async function SurveyPublicPage({ params }: { params: { id: strin
     questions: Question[];
   }) | null;
   if (!survey || survey.status !== 'PUBLISHED') notFound();
+  const raffle = await prisma.raffle.findUnique({ where: { surveyId: survey.id } });
   return (
     <div className="mx-auto max-w-3xl p-4 sm:p-6">
       {/* Encabezado estilo Google Forms */}
@@ -30,6 +31,21 @@ export default async function SurveyPublicPage({ params }: { params: { id: strin
       <Card>
         <PublicSurveyForm survey={survey} />
       </Card>
+      {raffle && raffle.isActive && (
+        <form
+          action={`/api/raffles/${raffle.id}/participate`}
+          method="post"
+          className="mt-4 text-center"
+        >
+          <input type="hidden" name="fromSurvey" value="1" />
+          <button
+            type="submit"
+            className="rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90"
+          >
+            Participar
+          </button>
+        </form>
+      )}
     </div>
   );
 }

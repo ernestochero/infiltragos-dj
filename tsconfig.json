@@ -30,6 +30,9 @@
       ],
       "@survey/*": [
         "./src/modules/survey/*"
+      ],
+      "@raffle/*": [
+        "./src/modules/raffle/*"
       ]
     },
     "incremental": true,
