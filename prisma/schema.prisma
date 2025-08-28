@@ -46,6 +46,7 @@ model Survey {
   updatedAt     DateTime         @updatedAt
   questions     SurveyQuestion[]
   responses     SurveyResponse[]
+  raffle        Raffle?
 }
 
 model SurveyQuestion {
@@ -69,6 +70,53 @@ model SurveyResponse {
   answers   Json
   completed Boolean  @default(true)
   createdAt DateTime @default(now())
+  raffleEntries RaffleEntry[]
+}
+
+model Raffle {
+  id                       String   @id @default(cuid())
+  surveyId                 String   @unique
+  survey                   Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  isActive                 Boolean  @default(false)
+  publicParticipants       Boolean  @default(true)
+  publicDisplayQuestionIds String[] @default([])
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  entries RaffleEntry[]
+  winners RaffleWinner[]
+}
+
+model RaffleEntry {
+  id               String   @id @default(cuid())
+  raffleId         String
+  raffle           Raffle   @relation(fields: [raffleId], references: [id], onDelete: Cascade)
+  surveyResponseId String
+  surveyResponse   SurveyResponse @relation(fields: [surveyResponseId], references: [id], onDelete: Cascade)
+
+  phoneNorm      String?  @db.VarChar(32)
+  ipHash         String   @db.Char(64)
+  userAgentShort String?  @db.VarChar(200)
+  createdAt      DateTime @default(now())
+
+  @@unique([raffleId, surveyResponseId])
+  @@unique([raffleId, ipHash])
+  @@unique([raffleId, phoneNorm])
+  @@index([raffleId, createdAt])
+  winner        RaffleWinner?
+}
+
+model RaffleWinner {
+  id            String   @id @default(cuid())
+  raffleId      String
+  raffle        Raffle   @relation(fields: [raffleId], references: [id], onDelete: Cascade)
+  raffleEntryId String   @unique
+  raffleEntry   RaffleEntry @relation(fields: [raffleEntryId], references: [id], onDelete: Cascade)
+  position      Int
+  createdAt     DateTime @default(now())
+
+  @@unique([raffleId, position])
+  @@index([raffleId])
 }
 
 enum SurveyStatus {
