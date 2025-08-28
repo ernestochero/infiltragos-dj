@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Button,
@@ -10,6 +10,9 @@ import {
   Select,
   Textarea,
 } from '@survey/components/ui';
+import { SurveyUpsertSchema } from '@survey/lib/validation';
+import { createSurvey } from '@survey/services/surveyService';
+import { createRaffle } from '@survey/services/raffleService';
 
 interface Option {
   id?: string;
@@ -54,11 +57,17 @@ export default function SurveyForm({ initial }: SurveyFormProps) {
     initial?.effectiveFrom ? initial.effectiveFrom.slice(0, 10) : '',
   );
   const [questions, setQuestions] = useState<Question[]>(initial?.questions || []);
+  const [enableRaffle, setEnableRaffle] = useState(false);
+  const [raffleActive, setRaffleActive] = useState(true);
+  const [rafflePublic, setRafflePublic] = useState(true);
+  const [publicDisplayQuestionIds, setPublicDisplayQuestionIds] = useState<string[]>([]);
+  const [raffleError, setRaffleError] = useState(false);
+  const [createdSurveyId, setCreatedSurveyId] = useState<string | null>(null);
 
   const addQuestion = () => {
     setQuestions(qs => [
       ...qs,
-      { type: 'SHORT_TEXT', label: '', required: false, options: [] },
+      { id: crypto.randomUUID(), type: 'SHORT_TEXT', label: '', required: false, options: [] },
     ]);
   };
 
@@ -108,6 +117,11 @@ export default function SurveyForm({ initial }: SurveyFormProps) {
     });
   };
 
+  // Remove any selected ids that no longer exist
+  useEffect(() => {
+    setPublicDisplayQuestionIds(ids => ids.filter(id => questions.some(q => q.id === id)));
+  }, [questions]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const payload = {
@@ -122,14 +136,51 @@ export default function SurveyForm({ initial }: SurveyFormProps) {
         options: q.options?.map((o, i) => ({ ...o, order: i })),
       })),
     };
-    const res = await fetch(initial?.id ? `/api/surveys/${initial.id}` : '/api/surveys', {
-      method: initial?.id ? 'PATCH' : 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    if (res.ok) {
-      router.push('/survey');
-    } else {
+    const parse = SurveyUpsertSchema.safeParse(payload);
+    if (!parse.success) {
+      alert('Error de validación');
+      return;
+    }
+    // Editing existing survey
+    if (initial?.id) {
+      try {
+        const res = await fetch(`/api/surveys/${initial.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(parse.data),
+        });
+        if (res.ok) {
+          router.push('/survey');
+        } else {
+          alert('Error al guardar');
+        }
+      } catch {
+        alert('Error al guardar');
+      }
+      return;
+    }
+
+    try {
+      const survey = await createSurvey(parse.data);
+      if (!enableRaffle) {
+        router.push('/survey');
+        return;
+      }
+      const rafflePayload = {
+        surveyId: survey.id,
+        isActive: raffleActive,
+        publicParticipants: rafflePublic,
+        publicDisplayQuestionIds: rafflePublic ? publicDisplayQuestionIds : [],
+      };
+      try {
+        await createRaffle(rafflePayload);
+        router.push(`/survey/${survey.id}/edit`);
+      } catch {
+        alert('Error al crear sorteo');
+        setRaffleError(true);
+        setCreatedSurveyId(survey.id);
+      }
+    } catch {
       alert('Error al guardar');
     }
   };
@@ -259,6 +310,92 @@ export default function SurveyForm({ initial }: SurveyFormProps) {
         <Button type="button" variant="muted" onClick={addQuestion}>
           Añadir pregunta
         </Button>
+      </div>
+
+      <div className="space-y-2">
+        <h2 className="text-lg font-semibold tracking-tight">Modo sorteo</h2>
+        <div className="space-y-2">
+          <Label htmlFor="enableRaffle" className="inline-flex items-center gap-2">
+            <Input
+              id="enableRaffle"
+              type="checkbox"
+              checked={enableRaffle}
+              onChange={e => setEnableRaffle(e.target.checked)}
+            />
+            Habilitar sorteo
+          </Label>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="raffleActive" className="inline-flex items-center gap-2">
+            <Input
+              id="raffleActive"
+              type="checkbox"
+              disabled={!enableRaffle}
+              checked={raffleActive}
+              onChange={e => setRaffleActive(e.target.checked)}
+            />
+            Sorteo activo (aceptar inscripciones)
+          </Label>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="rafflePublic" className="inline-flex items-center gap-2">
+            <Input
+              id="rafflePublic"
+              type="checkbox"
+              disabled={!enableRaffle}
+              checked={rafflePublic}
+              onChange={e => setRafflePublic(e.target.checked)}
+            />
+            Lista pública de participantes (solo campos seleccionados)
+          </Label>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="publicDisplayQuestionIds">Campos públicos a mostrar</Label>
+          <Select
+            id="publicDisplayQuestionIds"
+            multiple
+            disabled={!enableRaffle || !rafflePublic}
+            value={publicDisplayQuestionIds}
+            onChange={e =>
+              setPublicDisplayQuestionIds(
+                Array.from(e.target.selectedOptions).map(o => o.value),
+              )
+            }
+            className="h-32"
+          >
+            {questions.map(q => (
+              <option key={q.id} value={q.id}>
+                {q.label} ({q.id})
+              </option>
+            ))}
+          </Select>
+          {enableRaffle && rafflePublic && publicDisplayQuestionIds.length === 0 && (
+            <p className="text-sm text-yellow-500">
+              Recomendado seleccionar al menos un campo
+            </p>
+          )}
+        </div>
+        {raffleError && createdSurveyId && (
+          <Button
+            type="button"
+            variant="muted"
+            onClick={async () => {
+              try {
+                await createRaffle({
+                  surveyId: createdSurveyId,
+                  isActive: raffleActive,
+                  publicParticipants: rafflePublic,
+                  publicDisplayQuestionIds: rafflePublic ? publicDisplayQuestionIds : [],
+                });
+                router.push(`/survey/${createdSurveyId}/edit`);
+              } catch {
+                alert('Error al crear sorteo');
+              }
+            }}
+          >
+            Reintentar crear sorteo
+          </Button>
+        )}
       </div>
 
       <div className="flex gap-2">
