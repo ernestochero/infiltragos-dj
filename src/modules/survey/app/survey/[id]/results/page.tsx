@@ -1,6 +1,9 @@
 import { cookies } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import prisma from '@core/prisma';
+import Breadcrumbs from '@survey/components/nav/Breadcrumbs';
+import SurveyTabs from '@survey/components/nav/SurveyTabs';
+import Link from 'next/link';
 
 interface Props {
   params: { id: string };
@@ -47,7 +50,22 @@ export default async function SurveyResultsPage({ params }: Props) {
   ).length;
 
   return (
-    <main className="mx-auto w-full max-w-7xl p-3">
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <Breadcrumbs
+          items={[
+            { label: 'Inicio', href: '/' },
+            { label: 'Surveys', href: '/survey' },
+            { label: survey.name || survey.id },
+            { label: 'Resultados' },
+          ]}
+        />
+        <SurveyTabs id={survey.id} />
+        <Link href="/survey" className="text-sm text-indigo-300 hover:text-indigo-200">
+          ← Volver
+        </Link>
+      </div>
+
       {/* Header */}
       <div className="mb-4">
         <h1 className="text-2xl font-semibold tracking-tight text-slate-100">
@@ -152,6 +170,6 @@ export default async function SurveyResultsPage({ params }: Props) {
         <h2 className="mb-2 text-lg font-medium text-slate-100">Gráficos</h2>
         <p className="text-sm text-slate-400">Próximamente: distribución de respuestas por pregunta.</p>
       </section>
-    </main>
+    </div>
   );
 }
