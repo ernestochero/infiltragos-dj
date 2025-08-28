@@ -17,10 +17,17 @@ export default async function SurveyPublicPage({ params }: { params: { id: strin
   }) | null;
   if (!survey || survey.status !== 'PUBLISHED') notFound();
   return (
-    <div className="mx-auto max-w-2xl p-4">
+    <div className="mx-auto max-w-3xl p-4 sm:p-6">
+      {/* Encabezado estilo Google Forms */}
+      <div className="mb-6 rounded-xl border bg-gradient-to-b from-muted/30 to-transparent p-6 text-center sm:mb-8 sm:p-8">
+        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{survey.name}</h1>
+        <p className="mx-auto mt-3 max-w-2xl text-sm text-muted-foreground sm:text-base">
+          {survey.description ?? 'Responde estas rápidas preguntas y ayúdanos a mejorar tu experiencia. ¡Gracias!'}
+        </p>
+      </div>
+
+      {/* Contenedor del formulario */}
       <Card>
-        <h1 className="mb-4 text-2xl font-semibold tracking-tight">{survey.name}</h1>
-        {survey.description && <p className="mb-6 text-sm text-muted-foreground">{survey.description}</p>}
         <PublicSurveyForm survey={survey} />
       </Card>
     </div>
