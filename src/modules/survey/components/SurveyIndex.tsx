@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import LogoutButton from '@survey/components/LogoutButton';
 
 type SurveyItem = {
   id: string;
@@ -153,12 +154,15 @@ export default function SurveyIndex() {
             </div>
           </form>
 
-          <Link
-            href="/survey/new"
-            className="inline-flex shrink-0 items-center justify-center rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-500"
-          >
-            Nueva encuesta
-          </Link>
+          <div className="flex gap-2">
+            <Link
+              href="/survey/new"
+              className="inline-flex shrink-0 items-center justify-center rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-500"
+            >
+              Nueva encuesta
+            </Link>
+            <LogoutButton />
+          </div>
         </div>
       </div>
 
