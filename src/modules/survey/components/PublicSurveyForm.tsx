@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Question } from '@survey/lib/validation';
 import { Input, Textarea, Select, Button, Fieldset } from '@survey/components/ui';
 
@@ -13,13 +12,14 @@ interface Props {
     questions: Question[];
   };
   raffleId?: string;
+  onSuccess?: () => void;
 }
 
-export default function PublicSurveyForm({ survey, raffleId }: Props) {
-  const router = useRouter();
+export default function PublicSurveyForm({ survey, raffleId, onSuccess }: Props) {
   const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const handleChange = (key: string, value: string | string[]) => {
     setAnswers(prev => ({ ...prev, [key]: value }));
@@ -29,6 +29,7 @@ export default function PublicSurveyForm({ survey, raffleId }: Props) {
     e.preventDefault();
     setStatus('loading');
     setError('');
+    setFieldErrors({});
     try {
       const url = raffleId
         ? `/api/raffles/${raffleId}/participate`
@@ -40,14 +41,29 @@ export default function PublicSurveyForm({ survey, raffleId }: Props) {
       });
       if (res.ok) {
         if (raffleId) {
-          router.push(`/raffles/${raffleId}`);
+          onSuccess?.();
+          setStatus('idle');
+          setAnswers({});
           return;
         }
         setStatus('success');
         return;
       }
       const data = await res.json().catch(() => null);
-      setError(data?.error ? 'Error al enviar.' : 'Error inesperado');
+      const flat = data?.error;
+      if (flat?.fieldErrors && typeof flat.fieldErrors === 'object') {
+        const map: Record<string, string> = {};
+        for (const [k, arr] of Object.entries(flat.fieldErrors)) {
+          const first = Array.isArray(arr) && arr.length > 0 ? String(arr[0]) : '';
+          if (first) map[k] = first;
+        }
+        setFieldErrors(map);
+        setError('Por favor corrige los campos marcados.');
+      } else if (data?.error) {
+        setError(typeof data.error === 'string' ? data.error : 'Error al enviar.');
+      } else {
+        setError('Error inesperado');
+      }
       setStatus('error');
     } catch {
       setError('Error al enviar.');
@@ -164,6 +180,9 @@ export default function PublicSurveyForm({ survey, raffleId }: Props) {
               </div>
             )}
             {q.helpText && <p className="text-xs text-muted-foreground">{q.helpText}</p>}
+            {fieldErrors[key] && (
+              <p className="text-xs text-red-500">{fieldErrors[key]}</p>
+            )}
           </Fieldset>
         );
       })}

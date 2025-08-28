@@ -39,7 +39,10 @@ export async function GET(req: NextRequest) {
       skip: (page - 1) * pageSize,
       take: pageSize,
       orderBy: { updatedAt: 'desc' },
-      include: { _count: { select: { responses: true } } },
+      include: {
+        _count: { select: { responses: true } },
+        raffle: { select: { id: true, isActive: true } },
+      },
     }),
     prisma.survey.count({ where }),
   ]);

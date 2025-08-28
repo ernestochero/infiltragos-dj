@@ -10,6 +10,7 @@ type SurveyItem = {
   status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' | string;
   updatedAt: string;
   _count: { responses: number };
+  raffle?: { id: string; isActive: boolean } | null;
 };
 
 function StatusBadge({ status }: { status: SurveyItem['status'] }) {
@@ -35,7 +36,8 @@ export default function SurveyIndex() {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [loading, setLoading] = useState(false);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [copied, setCopied] = useState<{ id: string; type: 'survey' | 'raffle' } | null>(null);
+  const [rafflesBySurveyId, setRafflesBySurveyId] = useState<Record<string, { id: string; isActive: boolean }>>({});
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -48,7 +50,24 @@ export default function SurveyIndex() {
       const res = await fetch(`/api/surveys?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
-        setList(data.items);
+        const items: SurveyItem[] = data.items as SurveyItem[];
+        setList(items);
+        // Fallback: build raffle map
+        try {
+          const raffRes = await fetch('/api/raffles');
+          if (raffRes.ok) {
+            const raffData = await raffRes.json();
+            const map: Record<string, { id: string; isActive: boolean }> = {};
+            for (const r of raffData.items as Array<{ id: string; surveyId: string; isActive: boolean }>) {
+              map[r.surveyId] = { id: r.id, isActive: r.isActive };
+            }
+            setRafflesBySurveyId(map);
+          } else {
+            setRafflesBySurveyId({});
+          }
+        } catch {
+          setRafflesBySurveyId({});
+        }
       }
     } finally {
       setLoading(false);
@@ -81,8 +100,18 @@ export default function SurveyIndex() {
   const copyLink = async (slug: string, id: string) => {
     try {
       await navigator.clipboard.writeText(`${window.location.origin}/survey/${slug}`);
-      setCopiedId(id);
-      setTimeout(() => setCopiedId(null), 1500);
+      setCopied({ id, type: 'survey' });
+      setTimeout(() => setCopied(null), 1500);
+    } catch {
+      // ignore
+    }
+  };
+
+  const copyRaffleLink = async (raffleId: string, id: string) => {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/raffles/${raffleId}`);
+      setCopied({ id, type: 'raffle' });
+      setTimeout(() => setCopied(null), 1500);
     } catch {
       // ignore
     }
@@ -191,7 +220,22 @@ export default function SurveyIndex() {
               )}
               {list.map((it) => (
                 <tr key={it.id} className="hover:bg-white/5">
-                  <td className="whitespace-nowrap px-4 py-3 font-medium text-gray-100">{it.name}</td>
+                  <td className="whitespace-nowrap px-4 py-3 font-medium text-gray-100">
+                    <span>{it.name}</span>
+                    {(() => {
+                      const r = it.raffle ?? rafflesBySurveyId[it.id];
+                      if (!r) return null;
+                      return r.isActive ? (
+                        <span className="ml-2 inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800 ring-1 ring-emerald-200">
+                          SORTEO ACTIVO
+                        </span>
+                      ) : (
+                        <span className="ml-2 inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800 ring-1 ring-gray-200">
+                          SORTEO INACTIVO
+                        </span>
+                      );
+                    })()}
+                  </td>
                   <td className="whitespace-nowrap px-4 py-3 text-gray-300">{it.slug}</td>
                   <td className="whitespace-nowrap px-4 py-3"><StatusBadge status={it.status} /></td>
                   <td className="whitespace-nowrap px-4 py-3 text-gray-300">{new Date(it.updatedAt).toLocaleString()}</td>
@@ -204,8 +248,16 @@ export default function SurveyIndex() {
                         onClick={() => copyLink(it.slug, it.id)}
                         className="rounded-md border border-white/10 px-2 py-1 text-xs text-indigo-300 hover:bg-white/10"
                       >
-                        {copiedId === it.id ? '¡Copiado!' : 'Copiar enlace'}
+                        {copied?.id === it.id && copied?.type === 'survey' ? '¡Copiado!' : 'Copiar enlace'}
                       </button>
+                      {(it.raffle || rafflesBySurveyId[it.id]) && (
+                        <button
+                          onClick={() => copyRaffleLink((it.raffle?.id ?? rafflesBySurveyId[it.id].id), it.id)}
+                          className="rounded-md border border-emerald-900/40 bg-emerald-950/40 px-2 py-1 text-xs text-emerald-300 hover:bg-emerald-900/30"
+                        >
+                          {copied?.id === it.id && copied?.type === 'raffle' ? '¡Copiado!' : 'Copiar enlace sorteo'}
+                        </button>
+                      )}
                       <button
                         onClick={() => handleDelete(it.id)}
                         className="rounded-md border border-white/10 px-2 py-1 text-xs text-red-300 hover:bg-white/10"
