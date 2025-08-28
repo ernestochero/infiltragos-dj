@@ -68,7 +68,21 @@ export function buildZodFromSurvey(questions: Question[]) {
         break;
       }
       case 'DATE': {
-        schema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+        schema = z.string().refine(val => {
+          // Check format
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(val)) return false;
+          // Parse components
+          const [year, month, day] = val.split('-').map(Number);
+          const date = new Date(val + 'T00:00:00Z');
+          // Check that date is valid and matches input
+          return (
+            date instanceof Date &&
+            !isNaN(date.getTime()) &&
+            date.getUTCFullYear() === year &&
+            date.getUTCMonth() + 1 === month &&
+            date.getUTCDate() === day
+          );
+        }, { message: 'Invalid date' });
         break;
       }
       case 'SINGLE_CHOICE': {
