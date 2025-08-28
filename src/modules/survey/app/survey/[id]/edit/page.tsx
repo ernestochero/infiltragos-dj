@@ -2,9 +2,12 @@ import { cookies } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import SurveyForm from '@survey/components/SurveyForm';
 import SurveyStatusControls from '@survey/components/SurveyStatusControls';
+import Breadcrumbs from '@survey/components/nav/Breadcrumbs';
+import SurveyTabs from '@survey/components/nav/SurveyTabs';
 import prisma from '@core/prisma';
 import type { Question } from '@survey/lib/validation';
 import { Card } from '@survey/components/ui';
+import Link from 'next/link';
 
 interface Props {
   params: { id: string };
@@ -21,7 +24,22 @@ export default async function EditSurveyPage({ params }: Props) {
   });
   if (!survey) notFound();
   return (
-    <main className="mx-auto w-full max-w-[1400px] px-3 md:px-4 lg:px-6 py-5 space-y-6">
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <Breadcrumbs
+          items={[
+            { label: 'Inicio', href: '/' },
+            { label: 'Surveys', href: '/survey' },
+            { label: survey.name || survey.id },
+            { label: 'Editar' },
+          ]}
+        />
+        <SurveyTabs id={survey.id} />
+        <Link href="/survey" className="text-sm text-indigo-300 hover:text-indigo-200">
+          ← Volver
+        </Link>
+      </div>
+
       <header className="flex items-start justify-between gap-4">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">Editar encuesta</h1>
@@ -59,6 +77,6 @@ export default async function EditSurveyPage({ params }: Props) {
           }}
         />
       </Card>
-    </main>
+    </div>
   );
 }

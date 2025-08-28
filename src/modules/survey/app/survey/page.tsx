@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import Breadcrumbs from '@survey/components/nav/Breadcrumbs';
 
 type SurveyItem = {
   id: string;
@@ -89,9 +90,10 @@ export default function SurveyIndex() {
 
   return (
     <div className="space-y-4">
+      <Breadcrumbs items={[{ label: 'Inicio', href: '/' }, { label: 'Surveys' }]} />
       {/* Filters */}
       <div className="rounded-lg border border-white/10 bg-white/5 p-4 backdrop-blur sm:p-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <form onSubmit={handleSearch} className="grid w-full grid-cols-1 gap-3 sm:grid-cols-5">
             <div className="col-span-2">
               <label className="mb-1 block text-xs font-medium text-gray-300">Buscar</label>
@@ -152,13 +154,6 @@ export default function SurveyIndex() {
               </button>
             </div>
           </form>
-
-          <Link
-            href="/survey/new"
-            className="inline-flex shrink-0 items-center justify-center rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-500"
-          >
-            Nueva encuesta
-          </Link>
         </div>
       </div>
 
