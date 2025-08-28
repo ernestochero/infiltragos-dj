@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import prisma from '@core/prisma';
+import { signSession, SESSION_COOKIE } from '@core/api/auth';
+import { UserRole } from '@prisma/client';
 
-// Runtime y dinámica para evitar static optimization
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -20,18 +22,34 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
   }
   const { username, password, rememberMe } = parse.data;
-  const user = process.env.DJ_ADMIN_USER;
-  const pass = process.env.DJ_ADMIN_PASSWORD;
-  if (username !== user || password !== pass) {
-    return NextResponse.json(
-      { error: 'Invalid username or password' },
-      { status: 401 },
-    );
+  const user = await prisma.user.findFirst({ where: { name: username } });
+  if (!user) {
+    return NextResponse.json({ error: 'Invalid username or password' }, { status: 401 });
   }
-  const res = NextResponse.json({ ok: true });
+
+  if (user.role === UserRole.PATRON) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  }
+
+  let expectedUser = '';
+  let expectedPass = '';
+  if (user.role === UserRole.DJ) {
+    expectedUser = process.env.DJ_ADMIN_USER || '';
+    expectedPass = process.env.DJ_ADMIN_PASSWORD || '';
+  } else if (user.role === UserRole.ADMIN) {
+    expectedUser = process.env.ADMIN_USER || '';
+    expectedPass = process.env.ADMIN_PASSWORD || '';
+  }
+
+  if (username !== expectedUser || password !== expectedPass) {
+    return NextResponse.json({ error: 'Invalid username or password' }, { status: 401 });
+  }
+
+  const token = signSession({ sub: user.id, role: user.role });
+  const res = NextResponse.json({ ok: true, role: user.role });
   res.cookies.set({
-    name: 'dj_admin',
-    value: '1',
+    name: SESSION_COOKIE,
+    value: token,
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',

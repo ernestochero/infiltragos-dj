@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
+import { verifySession, SESSION_COOKIE } from '@core/api/auth';
 import SurveyForm from '@survey/components/SurveyForm';
 import SurveyStatusControls from '@survey/components/SurveyStatusControls';
 import Breadcrumbs from '@survey/components/nav/Breadcrumbs';
@@ -14,9 +15,10 @@ interface Props {
 }
 
 export default async function EditSurveyPage({ params }: Props) {
-  const cookie = cookies().get('dj_admin');
-  if (cookie?.value !== '1') {
-    redirect('/dj/login');
+  const token = cookies().get(SESSION_COOKIE)?.value;
+  const session = verifySession(token);
+  if (!session || session.role !== 'ADMIN') {
+    redirect('/login');
   }
   const survey = await prisma.survey.findUnique({
     where: { id: params.id },

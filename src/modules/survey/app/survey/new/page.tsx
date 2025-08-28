@@ -1,13 +1,15 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { verifySession, SESSION_COOKIE } from '@core/api/auth';
 import SurveyForm from '@survey/components/SurveyForm';
 import { Card } from '@survey/components/ui';
 import Breadcrumbs from '@survey/components/nav/Breadcrumbs';
 
 export default function NewSurveyPage() {
-  const cookie = cookies().get('dj_admin');
-  if (cookie?.value !== '1') {
-    redirect('/dj/login');
+  const token = cookies().get(SESSION_COOKIE)?.value;
+  const session = verifySession(token);
+  if (!session || session.role !== 'ADMIN') {
+    redirect('/login');
   }
 
   return (

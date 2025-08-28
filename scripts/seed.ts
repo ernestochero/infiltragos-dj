@@ -3,14 +3,26 @@ import { PrismaClient, RequestStatus, UserRole, SurveyStatus } from '@prisma/cli
 const prisma = new PrismaClient();
 
 async function main() {
+  const djUser = process.env.DJ_ADMIN_USER || 'dj@example.com';
+  const adminUser = process.env.ADMIN_USER || 'admin@example.com';
+
+  await prisma.user.upsert({
+    where: { name: djUser },
+    update: { role: UserRole.DJ },
+    create: { name: djUser, role: UserRole.DJ },
+  });
+  await prisma.user.upsert({
+    where: { name: adminUser },
+    update: { role: UserRole.ADMIN },
+    create: { name: adminUser, role: UserRole.ADMIN },
+  });
   await prisma.user.createMany({
     data: [
-      { name: 'DJ One', role: UserRole.DJ },
-      { name: 'Admin', role: UserRole.ADMIN },
       { name: 'Patron 1', role: UserRole.PATRON },
       { name: 'Patron 2', role: UserRole.PATRON },
       { name: 'Patron 3', role: UserRole.PATRON },
     ],
+    skipDuplicates: true,
   });
 
   await prisma.request.createMany({

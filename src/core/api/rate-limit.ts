@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { ADMIN_COOKIE } from './auth';
+import { getSession } from './auth';
 
 interface Record {
   count: number;
@@ -43,7 +43,8 @@ export function rateLimitByRequest(
   limit: number,
   windowMs: number,
 ): RateLimitResult {
-  const user = req.cookies.get(ADMIN_COOKIE)?.value;
+  const session = getSession(req);
+  const user = session?.sub;
   const ip = req.ip ?? '0.0.0.0';
   const scope = user ? `u:${user}` : `ip:${ip}`;
   return rateLimit(`${prefix}:${scope}`, limit, windowMs);

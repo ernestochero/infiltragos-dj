@@ -34,8 +34,8 @@ npm test
 ## Environment
 Copy `.env.example` to `.env` and fill in values for database and realtime providers.
 
-Set `DJ_ADMIN_USER` and `DJ_ADMIN_PASSWORD` to control access to the `/dj/admin` area.
-Log in at `/dj/login` with those credentials to receive the admin cookie and be redirected to `/dj/admin`. Use the "Logout" button in `/dj/admin` to clear the session.
+Set `ADMIN_USER`, `ADMIN_PASSWORD`, `DJ_ADMIN_USER` and `DJ_ADMIN_PASSWORD` to control access.
+Log in at `/login` with those credentials. DJs go to `/dj/admin` while admins land on `/admin`. Use the "Logout" button to clear the session.
 
 ### Manual tests
 - Dragging a card between columns persists the new status.
@@ -50,7 +50,7 @@ The codebase is organized in a light multi-module layout.
 
 - Shared utilities live under `src/core` and can be imported with the `@core` alias.
 - The DJ feature set lives under `src/modules/dj` and is available via the `@dj` alias.
-- The DJ routes are mounted under `/dj`; legacy URLs like `/`, `/admin`, `/login` and `/queue` redirect to the new paths.
+- The DJ routes are mounted under `/dj`; legacy URLs like `/` and `/queue` redirect to the new paths.
 
 ### Adding new modules
 

@@ -22,8 +22,10 @@ export default function LoginPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password, rememberMe }),
       });
-      if (res.ok) {
-        router.push('/dj/admin');
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.ok) {
+        const dest = data.role === 'ADMIN' ? '/admin' : '/dj/admin';
+        router.push(dest);
       } else if (res.status === 401) {
         setError('Invalid username or password');
       } else {
@@ -41,8 +43,8 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         <div className="rounded-xl border border-slate-700/60 bg-slate-900/60 backdrop-blur p-6 shadow-xl">
           <header className="mb-6 text-center">
-            <h1 className="text-3xl font-extrabold tracking-tight text-slate-100">DJ Login</h1>
-            <p className="mt-1 text-sm text-slate-400">Sign in to manage the queue</p>
+            <h1 className="text-3xl font-extrabold tracking-tight text-slate-100">Login</h1>
+            <p className="mt-1 text-sm text-slate-400">Sign in to continue</p>
           </header>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -55,7 +57,7 @@ export default function LoginPage() {
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="e.g. admin"
+                placeholder="e.g. admin@example.com"
                 className="w-full rounded-lg border border-slate-700 bg-slate-800 text-slate-100 placeholder-slate-400 px-3 py-2 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-600"
                 required
                 autoComplete="username"
