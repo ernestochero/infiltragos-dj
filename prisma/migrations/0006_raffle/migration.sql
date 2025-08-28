@@ -5,8 +5,8 @@ CREATE TABLE "Raffle" (
   "isActive" BOOLEAN NOT NULL DEFAULT false,
   "publicParticipants" BOOLEAN NOT NULL DEFAULT true,
   "publicDisplayQuestionIds" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
-  "createdAt" TIMESTAMP NOT NULL DEFAULT NOW(),
-  "updatedAt" TIMESTAMP NOT NULL DEFAULT NOW(),
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT NOW(),
+  "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT NOW(),
   CONSTRAINT "Raffle_surveyId_fkey" FOREIGN KEY ("surveyId") REFERENCES "Survey"("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
@@ -18,7 +18,7 @@ CREATE TABLE "RaffleEntry" (
   "phoneNorm" VARCHAR(32),
   "ipHash" CHAR(64) NOT NULL,
   "userAgentShort" VARCHAR(200),
-  "createdAt" TIMESTAMP NOT NULL DEFAULT NOW(),
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT NOW(),
   CONSTRAINT "RaffleEntry_raffleId_fkey" FOREIGN KEY ("raffleId") REFERENCES "Raffle"("id") ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT "RaffleEntry_surveyResponseId_fkey" FOREIGN KEY ("surveyResponseId") REFERENCES "SurveyResponse"("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
@@ -34,7 +34,7 @@ CREATE TABLE "RaffleWinner" (
   "raffleId" TEXT NOT NULL,
   "raffleEntryId" TEXT NOT NULL UNIQUE,
   "position" INTEGER NOT NULL,
-  "createdAt" TIMESTAMP NOT NULL DEFAULT NOW(),
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT NOW(),
   CONSTRAINT "RaffleWinner_raffleId_fkey" FOREIGN KEY ("raffleId") REFERENCES "Raffle"("id") ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT "RaffleWinner_raffleEntryId_fkey" FOREIGN KEY ("raffleEntryId") REFERENCES "RaffleEntry"("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
