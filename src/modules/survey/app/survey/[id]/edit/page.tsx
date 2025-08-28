@@ -30,7 +30,7 @@ export default async function EditSurveyPage({ params }: Props) {
       <div className="space-y-2">
         <Breadcrumbs
           items={[
-            { label: 'Inicio', href: '/' },
+            { label: 'Inicio', href: '/admin' },
             { label: 'Surveys', href: '/survey' },
             { label: survey.name || survey.id },
             { label: 'Editar' },

@@ -90,7 +90,7 @@ export default function SurveyIndex() {
 
   return (
     <div className="space-y-4">
-      <Breadcrumbs items={[{ label: 'Inicio', href: '/' }, { label: 'Surveys' }]} />
+      <Breadcrumbs items={[{ label: 'Inicio', href: '/admin' }, { label: 'Surveys' }]} />
       {/* Filters */}
       <div className="rounded-lg border border-white/10 bg-white/5 p-4 backdrop-blur sm:p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
