@@ -41,7 +41,7 @@ describe('POST /api/surveys/[id]/responses', () => {
     const res = await POST(req, { params: { id: 's1' } });
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ok: true });
-      expect((mocked.surveyResponse.create as any)).toHaveBeenCalled();
+    expect((mocked.surveyResponse.create as any)).toHaveBeenCalled();
   });
 
   it('rejects invalid payload', async () => {
