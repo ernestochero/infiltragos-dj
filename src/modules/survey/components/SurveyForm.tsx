@@ -1,6 +1,15 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import {
+  Button,
+  Fieldset,
+  Input,
+  Label,
+  Legend,
+  Select,
+  Textarea,
+} from '@survey/components/ui';
 
 interface Option {
   id?: string;
@@ -128,53 +137,67 @@ export default function SurveyForm({ initial }: SurveyFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <label className="block">Nombre</label>
-        <input className="border p-2 w-full" value={name} onChange={e => setName(e.target.value)} />
+        <Label htmlFor="name">Nombre</Label>
+        <Input id="name" value={name} onChange={e => setName(e.target.value)} />
       </div>
       <div className="space-y-2">
-        <label className="block">Slug</label>
-        <div className="flex gap-2">
-          <input className="border p-2 w-full" value={slug} onChange={e => setSlug(e.target.value)} />
-          <button type="button" onClick={() => setSlug(slugify(name))} className="px-2 py-1 border">Auto</button>
-        </div>
+          <Label htmlFor="slug">Slug</Label>
+          <div className="flex gap-2">
+            <Input id="slug" value={slug} onChange={e => setSlug(e.target.value)} className="flex-1" />
+            <Button type="button" variant="muted" onClick={() => setSlug(slugify(name))}>
+              Auto
+            </Button>
+          </div>
       </div>
       <div className="space-y-2">
-        <label className="block">Descripción</label>
-        <textarea className="border p-2 w-full" value={description} onChange={e => setDescription(e.target.value)} />
+        <Label htmlFor="description">Descripción</Label>
+        <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} />
       </div>
       <div className="space-y-2">
-        <label className="block">Estado</label>
-        <select className="border p-2" value={status} onChange={e => setStatus(e.target.value)}>
+        <Label htmlFor="status">Estado</Label>
+        <Select id="status" value={status} onChange={e => setStatus(e.target.value)}>
           <option value="DRAFT">DRAFT</option>
           <option value="PUBLISHED">PUBLISHED</option>
           <option value="ARCHIVED">ARCHIVED</option>
-        </select>
+        </Select>
       </div>
       <div className="space-y-2">
-        <label className="block">Vigente desde</label>
-        <input type="date" className="border p-2" value={effectiveFrom} onChange={e => setEffectiveFrom(e.target.value)} />
+        <Label htmlFor="effectiveFrom">Vigente desde</Label>
+        <Input
+          id="effectiveFrom"
+          type="date"
+          value={effectiveFrom}
+          onChange={e => setEffectiveFrom(e.target.value)}
+        />
       </div>
 
       <div className="space-y-4">
-        <h2 className="font-bold">Preguntas</h2>
+        <h2 className="text-lg font-semibold tracking-tight">Preguntas</h2>
         {questions.map((q, idx) => (
-          <div key={idx} className="border p-2 space-y-2">
+          <Fieldset key={idx} className="space-y-2">
+            <Legend>Pregunta {idx + 1}</Legend>
             <div className="flex justify-between">
               <span>Pregunta {idx + 1}</span>
               <div className="space-x-2">
                 {idx > 0 && (
-                  <button type="button" onClick={() => moveQuestion(idx, -1)}>↑</button>
+                  <Button type="button" variant="muted" onClick={() => moveQuestion(idx, -1)}>
+                    ↑
+                  </Button>
                 )}
                 {idx < questions.length - 1 && (
-                  <button type="button" onClick={() => moveQuestion(idx, 1)}>↓</button>
+                  <Button type="button" variant="muted" onClick={() => moveQuestion(idx, 1)}>
+                    ↓
+                  </Button>
                 )}
-                <button type="button" onClick={() => removeQuestion(idx)}>Eliminar</button>
+                <Button type="button" variant="muted" onClick={() => removeQuestion(idx)}>
+                  Eliminar
+                </Button>
               </div>
             </div>
             <div className="space-y-2">
-              <label className="block">Tipo</label>
-              <select
-                className="border p-1"
+              <Label htmlFor={`q-${idx}-type`}>Tipo</Label>
+              <Select
+                id={`q-${idx}-type`}
                 value={q.type}
                 onChange={e => updateQuestion(idx, { type: e.target.value })}
               >
@@ -185,33 +208,33 @@ export default function SurveyForm({ initial }: SurveyFormProps) {
                 <option value="DATE">DATE</option>
                 <option value="SINGLE_CHOICE">SINGLE_CHOICE</option>
                 <option value="MULTIPLE_CHOICE">MULTIPLE_CHOICE</option>
-              </select>
+              </Select>
             </div>
             <div className="space-y-2">
-              <label className="block">Etiqueta</label>
-              <input
-                className="border p-1 w-full"
+              <Label htmlFor={`q-${idx}-label`}>Etiqueta</Label>
+              <Input
+                id={`q-${idx}-label`}
                 value={q.label}
                 onChange={e => updateQuestion(idx, { label: e.target.value })}
               />
             </div>
             <div className="space-y-2">
-              <label className="inline-flex items-center gap-2">
-                <input
+              <Label htmlFor={`q-${idx}-required`} className="inline-flex items-center gap-2">
+                <Input
+                  id={`q-${idx}-required`}
                   type="checkbox"
                   checked={q.required || false}
                   onChange={e => updateQuestion(idx, { required: e.target.checked })}
                 />
                 Requerida
-              </label>
+              </Label>
             </div>
             {['SINGLE_CHOICE', 'MULTIPLE_CHOICE'].includes(q.type) && (
               <div className="space-y-2">
                 <h3>Opciones</h3>
                 {q.options?.map((o, oIdx) => (
-                  <div key={oIdx} className="flex gap-2 items-center">
-                    <input
-                      className="border p-1"
+                  <div key={oIdx} className="flex items-center gap-2">
+                    <Input
                       placeholder="Label"
                       value={o.label}
                       onChange={e =>
@@ -221,30 +244,28 @@ export default function SurveyForm({ initial }: SurveyFormProps) {
                         })
                       }
                     />
-                    <button type="button" onClick={() => removeOption(idx, oIdx)}>
+                    <Button type="button" variant="muted" onClick={() => removeOption(idx, oIdx)}>
                       x
-                    </button>
+                    </Button>
                   </div>
                 ))}
-                <button type="button" className="px-2 py-1 border" onClick={() => addOption(idx)}>
+                <Button type="button" variant="muted" onClick={() => addOption(idx)}>
                   Añadir opción
-                </button>
+                </Button>
               </div>
             )}
-          </div>
+          </Fieldset>
         ))}
-        <button type="button" className="px-3 py-1 border" onClick={addQuestion}>
+        <Button type="button" variant="muted" onClick={addQuestion}>
           Añadir pregunta
-        </button>
+        </Button>
       </div>
 
       <div className="flex gap-2">
-        <button type="submit" className="px-3 py-1 bg-blue-500 text-white">
-          Guardar
-        </button>
-        <button type="button" className="px-3 py-1 border" onClick={() => router.push('/survey')}>
+        <Button type="submit">Guardar</Button>
+        <Button type="button" variant="muted" onClick={() => router.push('/survey')}>
           Cancelar
-        </button>
+        </Button>
       </div>
     </form>
   );
