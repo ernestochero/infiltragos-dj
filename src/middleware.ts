@@ -1,12 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { hasAdminCookie } from '@core/api/auth';
+import { getSession } from '@core/api/auth-edge';
 
-export function middleware(req: NextRequest) {
+function unauthorized(req: NextRequest, isApi: boolean) {
+  if (isApi) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  return NextResponse.redirect(new URL('/login', req.url));
+}
+
+export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  const isAdminRoute = pathname.startsWith('/dj/admin');
+  const session = await getSession(req);
+
+  const isDJRoute = pathname.startsWith('/dj');
   const isRequestsRoute = pathname.startsWith('/api/requests');
-  const isSurveyRoute = pathname.startsWith('/survey');
+  const isSurveyAdminRoute = pathname.startsWith('/survey/admin');
   const isSurveyApiRoute = pathname.startsWith('/api/surveys');
+  const isAdminRoute = pathname.startsWith('/admin');
   const isPublicRequest =
     isRequestsRoute && pathname === '/api/requests' && ['GET', 'POST'].includes(req.method);
 
@@ -14,14 +22,18 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  if (isAdminRoute || isRequestsRoute || isSurveyRoute || isSurveyApiRoute) {
-    if (hasAdminCookie(req)) {
-      return NextResponse.next();
+  if (isDJRoute || isRequestsRoute) {
+    if (!session || (session.role !== 'DJ' && session.role !== 'ADMIN')) {
+      return unauthorized(req, isRequestsRoute);
     }
-    if (isAdminRoute || isSurveyRoute) {
-      return NextResponse.redirect(new URL('/dj/login', req.url));
+    return NextResponse.next();
+  }
+
+  if (isSurveyAdminRoute || isSurveyApiRoute || isAdminRoute) {
+    if (!session || session.role !== 'ADMIN') {
+      return unauthorized(req, isSurveyApiRoute);
     }
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.next();
   }
 
   return NextResponse.next();
@@ -29,11 +41,10 @@ export function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    '/dj/admin',
-    '/dj/admin/:path*',
+    '/dj/:path*',
     '/api/requests/:path*',
-    '/survey',
-    '/survey/:path*',
+    '/survey/admin/:path*',
     '/api/surveys/:path*',
+    '/admin/:path*',
   ],
 };

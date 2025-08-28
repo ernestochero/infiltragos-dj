@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
+import { verifySession, SESSION_COOKIE } from '@core/api/auth';
 import prisma from '@core/prisma';
 import Breadcrumbs from '@survey/components/nav/Breadcrumbs';
 import SurveyTabs from '@survey/components/nav/SurveyTabs';
@@ -9,7 +10,6 @@ interface Props {
   params: { id: string };
 }
 
-// Small helpers kept here to avoid extra imports/components
 function formatDate(d: Date) {
   try {
     return new Intl.DateTimeFormat('es-PE', {
@@ -30,8 +30,9 @@ function Chip({ children }: { children: React.ReactNode }) {
 }
 
 export default async function SurveyResultsPage({ params }: Props) {
-  const cookie = cookies().get('dj_admin');
-  if (cookie?.value !== '1') redirect('/dj/login');
+  const token = cookies().get(SESSION_COOKIE)?.value;
+  const session = verifySession(token);
+  if (!session || session.role !== 'ADMIN') redirect('/login');
 
   const survey = await prisma.survey.findUnique({
     where: { id: params.id },
@@ -66,7 +67,6 @@ export default async function SurveyResultsPage({ params }: Props) {
         </Link>
       </div>
 
-      {/* Header */}
       <div className="mb-4">
         <h1 className="text-2xl font-semibold tracking-tight text-slate-100">
           Resultados · <span className="text-indigo-300">{survey.name}</span>
@@ -76,7 +76,6 @@ export default async function SurveyResultsPage({ params }: Props) {
         </p>
       </div>
 
-      {/* Stats */}
       <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
         <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 p-3">
           <p className="text-xs uppercase tracking-wide text-slate-400">Total respuestas</p>
@@ -89,16 +88,13 @@ export default async function SurveyResultsPage({ params }: Props) {
         <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 p-3">
           <p className="text-xs uppercase tracking-wide text-slate-400">Estado</p>
           <p className="mt-2">
-            <span
-              className="inline-flex items-center gap-1 rounded-full bg-emerald-600/15 px-2.5 py-1 text-sm font-medium text-emerald-300 ring-1 ring-inset ring-emerald-500/30"
-            >
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600/15 px-2.5 py-1 text-sm font-medium text-emerald-300 ring-1 ring-inset ring-emerald-500/30">
               {survey.status}
             </span>
           </p>
         </div>
       </div>
 
-      {/* Table */}
       <div className="overflow-hidden rounded-lg border border-slate-700/60 bg-slate-900/40">
         <div className="overflow-x-auto">
           <table className="min-w-full text-left text-sm">
@@ -117,12 +113,9 @@ export default async function SurveyResultsPage({ params }: Props) {
                   key={r.id}
                   className={idx % 2 === 0 ? 'bg-slate-900/20' : 'bg-slate-900/10 hover:bg-slate-900/20'}
                 >
-                  {/* Fecha sticky para mejorar lectura horizontal */}
                   <td className="sticky left-0 z-10 bg-inherit p-2 text-slate-200">
                     {formatDate(r.createdAt)}
                   </td>
-
-                  {/* Respuestas por pregunta */}
                   {survey.questions.map((q) => {
                     const key = q.id ?? `q${q.order}`;
                     const raw = (r.answers as Record<string, unknown>)[key];
@@ -165,7 +158,6 @@ export default async function SurveyResultsPage({ params }: Props) {
         </div>
       </div>
 
-      {/* Placeholder for charts */}
       <section className="mt-4 rounded-lg border border-slate-700/60 bg-slate-900/40 p-3">
         <h2 className="mb-2 text-lg font-medium text-slate-100">Gráficos</h2>
         <p className="text-sm text-slate-400">Próximamente: distribución de respuestas por pregunta.</p>

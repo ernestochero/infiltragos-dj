@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@core/prisma';
-import { hasAdminCookie } from '@core/api/auth';
+import { getSession } from '@core/api/auth';
 import { SurveyUpsertSchema } from '@survey/lib/validation';
 import { Prisma, SurveyStatus } from '@prisma/client';
 
 export async function GET(req: NextRequest) {
-  if (!hasAdminCookie(req)) {
+  const session = getSession(req);
+  if (!session || session.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   const { searchParams } = req.nextUrl;
@@ -47,7 +48,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!hasAdminCookie(req)) {
+  const session = getSession(req);
+  if (!session || session.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   const body = await req.json().catch(() => null);

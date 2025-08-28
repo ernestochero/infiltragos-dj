@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@core/prisma';
-import { hasAdminCookie } from '@core/api/auth';
+import { getSession } from '@core/api/auth';
 import { SurveyUpsertSchema } from '@survey/lib/validation';
 import { SurveyStatus } from '@prisma/client';
 
@@ -9,7 +9,8 @@ interface Context {
 }
 
 export async function GET(req: NextRequest, { params }: Context) {
-  if (!hasAdminCookie(req)) {
+  const session = getSession(req);
+  if (!session || session.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   const survey = await prisma.survey.findUnique({
@@ -23,7 +24,8 @@ export async function GET(req: NextRequest, { params }: Context) {
 }
 
 export async function PATCH(req: NextRequest, { params }: Context) {
-  if (!hasAdminCookie(req)) {
+  const session = getSession(req);
+  if (!session || session.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   const body = await req.json().catch(() => null);
@@ -67,13 +69,14 @@ export async function PATCH(req: NextRequest, { params }: Context) {
 }
 
 export async function DELETE(req: NextRequest, { params }: Context) {
-  if (!hasAdminCookie(req)) {
+  const session = getSession(req);
+  if (!session || session.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   try {
     const survey = await prisma.survey.update({
       where: { id: params.id },
-      data: { status: SurveyStatus.ARCHIVED },
+      data: { status: 'ARCHIVED' as SurveyStatus },
     });
     return NextResponse.json(survey);
   } catch (err) {
