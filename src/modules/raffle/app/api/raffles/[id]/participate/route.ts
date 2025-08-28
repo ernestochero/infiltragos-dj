@@ -36,7 +36,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   }
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0] ?? req.ip ?? '0.0.0.0';
   const ua = req.headers.get('user-agent') || '';
-  const ipHash = sha256Hex(`${ip}|${ua}`);
+  const isProd = process.env.NODE_ENV === 'production';
+  // In non-production, salt the hash to avoid the 1-per-device limit during local testing
+  const ipHashBase = `${ip}|${ua}`;
+  const ipHash = sha256Hex(isProd ? ipHashBase : `${ipHashBase}|${Date.now()}|${Math.random()}`);
   const userAgentShort = ua.slice(0, 200);
 
   try {

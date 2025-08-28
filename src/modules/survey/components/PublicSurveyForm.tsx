@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Question } from '@survey/lib/validation';
 import { Input, Textarea, Select, Button, Fieldset } from '@survey/components/ui';
 
@@ -11,9 +12,11 @@ interface Props {
     description?: string | null;
     questions: Question[];
   };
+  raffleId?: string;
 }
 
-export default function PublicSurveyForm({ survey }: Props) {
+export default function PublicSurveyForm({ survey, raffleId }: Props) {
+  const router = useRouter();
   const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [error, setError] = useState('');
@@ -27,12 +30,19 @@ export default function PublicSurveyForm({ survey }: Props) {
     setStatus('loading');
     setError('');
     try {
-      const res = await fetch(`/api/surveys/${survey.id}/responses`, {
+      const url = raffleId
+        ? `/api/raffles/${raffleId}/participate`
+        : `/api/surveys/${survey.id}/responses`;
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ answers }),
       });
       if (res.ok) {
+        if (raffleId) {
+          router.push(`/raffles/${raffleId}`);
+          return;
+        }
         setStatus('success');
         return;
       }
@@ -159,7 +169,7 @@ export default function PublicSurveyForm({ survey }: Props) {
       })}
       <div className="flex gap-2 pt-4">
         <Button type="submit" disabled={disabled}>
-          {status === 'loading' ? 'Enviando…' : 'Enviar'}
+          {status === 'loading' ? 'Enviando…' : raffleId ? 'Participar' : 'Enviar'}
         </Button>
         <Button type="button" variant="muted" onClick={resetForm} disabled={status === 'loading'}>
           Limpiar

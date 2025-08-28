@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import QRCode from 'qrcode';
 
 export default async function QRPage() {
@@ -5,7 +6,7 @@ export default async function QRPage() {
   const qr = await QRCode.toDataURL(url);
   return (
     <main className="flex flex-col items-center justify-center h-screen gap-4">
-      <img src={qr} alt="QR" className="w-64 h-64" />
+      <Image src={qr} alt="QR" width={256} height={256} className="w-64 h-64" />
       <p>Escanea para pedir tu canción</p>
     </main>
   );
