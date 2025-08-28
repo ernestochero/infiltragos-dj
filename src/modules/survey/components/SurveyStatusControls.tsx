@@ -1,5 +1,6 @@
 'use client';
 import { useRouter } from 'next/navigation';
+import { Button } from '@survey/components/ui';
 
 interface Props {
   id: string;
@@ -17,21 +18,21 @@ export default function SurveyStatusControls({ id, current }: Props) {
     router.refresh();
   };
   return (
-    <div className="flex gap-2 mt-4">
+    <div className="mt-4 flex gap-2">
       {current !== 'PUBLISHED' && (
-        <button type="button" className="px-2 py-1 border" onClick={() => change('PUBLISHED')}>
+        <Button type="button" variant="muted" onClick={() => change('PUBLISHED')}>
           Publicar
-        </button>
+        </Button>
       )}
       {current === 'PUBLISHED' && (
-        <button type="button" className="px-2 py-1 border" onClick={() => change('DRAFT')}>
+        <Button type="button" variant="muted" onClick={() => change('DRAFT')}>
           Despublicar
-        </button>
+        </Button>
       )}
       {current !== 'ARCHIVED' && (
-        <button type="button" className="px-2 py-1 border" onClick={() => change('ARCHIVED')}>
+        <Button type="button" variant="muted" onClick={() => change('ARCHIVED')}>
           Archivar
-        </button>
+        </Button>
       )}
     </div>
   );
