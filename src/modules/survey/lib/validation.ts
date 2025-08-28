@@ -49,30 +49,35 @@ export const SurveyUpsertSchema = z.object({
 
 export type Question = z.infer<typeof QuestionSchema>;
 
-export function SurveyResponseSchema(questions: Question[]) {
+export function buildZodFromSurvey(questions: Question[]) {
   const shape: Record<string, z.ZodTypeAny> = {};
   for (const q of questions) {
     let schema: z.ZodTypeAny = z.any();
     switch (q.type) {
       case 'SHORT_TEXT':
-      case 'LONG_TEXT':
+      case 'LONG_TEXT': {
         schema = z.string();
         break;
-      case 'EMAIL':
+      }
+      case 'EMAIL': {
         schema = z.string().email();
         break;
-      case 'PHONE':
-        schema = z.string();
+      }
+      case 'PHONE': {
+        schema = z.string().regex(/^[+]?[0-9]{7,15}$/);
         break;
-      case 'DATE':
-        schema = z.coerce.date();
+      }
+      case 'DATE': {
+        schema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
         break;
-      case 'SINGLE_CHOICE':
+      }
+      case 'SINGLE_CHOICE': {
         schema = z.string().refine(
           val => !q.options || q.options.some(o => o.value === val),
           { message: 'Invalid option' },
         );
         break;
+      }
       case 'MULTIPLE_CHOICE': {
         let arrSchema = z.array(z.string());
         if (q.required) arrSchema = arrSchema.min(1);
@@ -85,13 +90,21 @@ export function SurveyResponseSchema(questions: Question[]) {
       default:
         schema = z.any();
     }
-    if (!q.required) {
+    if (q.required) {
+      schema = schema.refine(v => {
+        if (typeof v === 'string') return v.trim().length > 0;
+        if (Array.isArray(v)) return v.length > 0;
+        return v !== undefined && v !== null;
+      }, { message: 'Required' });
+    } else {
       schema = schema.optional();
     }
     shape[q.id ?? `q${q.order}`] = schema;
   }
   return z.object(shape);
 }
+
+export const SurveyResponseSchema = buildZodFromSurvey;
 
 export function normalizeAnswers(answers: Record<string, unknown>, questions: Question[]) {
   const result: Record<string, unknown> = {};
@@ -100,15 +113,18 @@ export function normalizeAnswers(answers: Record<string, unknown>, questions: Qu
     const val = answers[key];
     if (q.type === 'MULTIPLE_CHOICE') {
       if (Array.isArray(val)) {
-        result[key] = val;
+        result[key] = val.map(v => (typeof v === 'string' ? v.trim() : v));
       } else if (typeof val === 'string') {
-        result[key] = [val];
+        result[key] = [val.trim()];
       } else {
         result[key] = [];
       }
     } else {
       if (Array.isArray(val)) {
-        result[key] = val[0];
+        const first = val[0];
+        result[key] = typeof first === 'string' ? first.trim() : first;
+      } else if (typeof val === 'string') {
+        result[key] = val.trim();
       } else {
         result[key] = val;
       }
@@ -116,3 +132,25 @@ export function normalizeAnswers(answers: Record<string, unknown>, questions: Qu
   }
   return result;
 }
+
+export const SurveyPublicQuestionSchema = z.object({
+  id: z.string().optional(),
+  type: QuestionTypeEnum,
+  label: z.string(),
+  required: z.boolean().optional().default(false),
+  options: z.array(OptionSchema).optional(),
+  helpText: z.string().optional(),
+});
+
+export const SurveyPublicSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  slug: z.string(),
+  status: z.enum(['DRAFT', 'PUBLISHED', 'ARCHIVED']),
+  description: z.string().nullable().optional(),
+  questions: z.array(SurveyPublicQuestionSchema),
+});
+
+export const SurveyPublicResponseSchema = z.object({
+  answers: z.record(z.any()),
+});
