@@ -1,6 +1,7 @@
 import prisma from '@core/prisma';
 import ParticipantsList from '@raffle/components/ParticipantsList';
 import RafflePublicClient from '@raffle/components/RafflePublicClient';
+import WinnersLive from '@raffle/components/WinnersLive';
 import { headers } from 'next/headers';
 import type { Question } from '@survey/lib/validation';
 import { sha256Hex } from '@raffle/lib/utils';
@@ -35,25 +36,26 @@ export default async function RafflePublicPage({ params }: { params: { id: strin
         <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
           {raffle.survey?.name || 'Sorteo'}
         </h1>
-        <p className="mx-auto mt-3 max-w-2xl text-sm text-muted-foreground sm:text-base">
-          Lista de participantes
-        </p>
+        {raffle.survey?.description && (
+          <p className="mx-auto mt-3 max-w-2xl text-sm text-muted-foreground sm:text-base">
+            {raffle.survey.description}
+          </p>
+        )}
       </div>
 
-      {raffle.isActive && (
-        <div className="mb-6 flex justify-center">
-          <RafflePublicClient
-            raffleId={raffle.id}
-            canParticipate={!alreadyParticipated}
-            survey={{
-              id: raffle.survey.id,
-              name: raffle.survey.name,
-              description: raffle.survey.description,
-              questions,
-            }}
-          />
-        </div>
-      )}
+      <div className="mb-6 flex justify-center">
+        <RafflePublicClient
+          raffleId={raffle.id}
+          canParticipate={!alreadyParticipated}
+          initialIsActive={raffle.isActive}
+          survey={{
+            id: raffle.survey.id,
+            name: raffle.survey.name,
+            description: raffle.survey.description,
+            questions,
+          }}
+        />
+      </div>
 
       {raffle.publicParticipants ? (
         <ParticipantsList raffleId={raffle.id} columns={columns} />
@@ -62,6 +64,8 @@ export default async function RafflePublicPage({ params }: { params: { id: strin
           Este sorteo no expone públicamente la lista de participantes.
         </p>
       )}
+
+      <WinnersLive raffleId={raffle.id} columns={columns} />
     </div>
   );
 }

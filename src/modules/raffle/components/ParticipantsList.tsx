@@ -37,7 +37,7 @@ export default function ParticipantsList({
           id="participants-list"
           className="text-xl font-extrabold text-slate-100 tracking-wide uppercase"
         >
-          Participantes
+          Lista de Participantes
         </h2>
         <span className="text-xs text-slate-500">{data?.total ?? 0} total</span>
       </div>

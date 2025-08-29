@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import Modal from '@dj/components/modal';
 import Breadcrumbs from '@survey/components/nav/Breadcrumbs';
 
 type SurveyItem = {
@@ -38,6 +39,9 @@ export default function SurveyIndex() {
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState<{ id: string; type: 'survey' | 'raffle' } | null>(null);
   const [rafflesBySurveyId, setRafflesBySurveyId] = useState<Record<string, { id: string; isActive: boolean }>>({});
+  const [drawFor, setDrawFor] = useState<{ surveyId: string; raffleId: string } | null>(null);
+  const [drawCount, setDrawCount] = useState(1);
+  const [drawing, setDrawing] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -117,7 +121,30 @@ export default function SurveyIndex() {
     }
   };
 
+  const openDrawModal = (surveyId: string, raffleId: string) => {
+    setDrawFor({ surveyId, raffleId });
+    setDrawCount(1);
+  };
+
+  const runDraw = async () => {
+    if (!drawFor) return;
+    setDrawing(true);
+    try {
+      await fetch(`/api/raffles/${drawFor.raffleId}/draw`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ count: drawCount }),
+      });
+      // Optionally open public reveal page in new tab
+      window.open(`/raffles/${drawFor.raffleId}`, '_blank');
+      setDrawFor(null);
+    } finally {
+      setDrawing(false);
+    }
+  };
+
   return (
+    <>
     <div className="space-y-4">
       <Breadcrumbs items={[{ label: 'Inicio', href: '/admin' }, { label: 'Surveys' }]} />
       {/* Filters */}
@@ -258,6 +285,14 @@ export default function SurveyIndex() {
                           {copied?.id === it.id && copied?.type === 'raffle' ? '¡Copiado!' : 'Copiar enlace sorteo'}
                         </button>
                       )}
+                      {(it.raffle || rafflesBySurveyId[it.id]) && (
+                        <button
+                          onClick={() => openDrawModal(it.id, (it.raffle?.id ?? rafflesBySurveyId[it.id].id))}
+                          className="rounded-md border border-amber-900/40 bg-amber-950/40 px-2 py-1 text-xs text-amber-300 hover:bg-amber-900/30"
+                        >
+                          Elegir ganadores
+                        </button>
+                      )}
                       <button
                         onClick={() => handleDelete(it.id)}
                         className="rounded-md border border-white/10 px-2 py-1 text-xs text-red-300 hover:bg-white/10"
@@ -273,5 +308,34 @@ export default function SurveyIndex() {
         </div>
       </div>
     </div>
+    <Modal open={!!drawFor} onClose={() => setDrawFor(null)} titleId="draw-modal-title">
+      <h2 id="draw-modal-title" className="text-lg font-bold mb-2">Elegir ganadores</h2>
+      <p className="text-xs text-slate-400 mb-3">Ingresa el número de ganadores a sortear.</p>
+      <div className="mb-4">
+        <input
+          type="number"
+          min={1}
+          value={drawCount}
+          onChange={e => setDrawCount(Math.max(1, Number(e.target.value) || 1))}
+          className="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-gray-100 focus:border-amber-400 focus:outline-none"
+        />
+      </div>
+      <div className="flex justify-end gap-2">
+        <button
+          onClick={() => setDrawFor(null)}
+          className="rounded-md border border-white/10 px-3 py-2 text-sm text-gray-200 hover:bg-white/10"
+        >
+          Cancelar
+        </button>
+        <button
+          onClick={runDraw}
+          disabled={drawing}
+          className="rounded-md bg-amber-600 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-amber-500 disabled:opacity-60"
+        >
+          {drawing ? 'Sorteando…' : 'Sortear'}
+        </button>
+      </div>
+    </Modal>
+    </>
   );
 }

@@ -33,17 +33,19 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (entries.length === 0) {
     return NextResponse.json({ error: 'No entries available' }, { status: 400 });
   }
+  const effectiveCount = Math.min(count, entries.length);
   // shuffle
   for (let i = entries.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [entries[i], entries[j]] = [entries[j], entries[i]];
   }
-  const selected = entries.slice(0, count);
+  const selected = entries.slice(0, effectiveCount);
   const maxPos = await prisma.raffleWinner.aggregate({
     where: { raffleId: raffle.id },
     _max: { position: true },
   });
-  let position = (maxPos._max.position ?? 0) + 1;
+  const prevMax = maxPos._max.position ?? 0;
+  let position = prevMax + 1;
 
   const winnersData = selected.map(e => ({
     raffleId: raffle.id,
@@ -52,8 +54,22 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   }));
   await prisma.raffleWinner.createMany({ data: winnersData });
 
-  const winners = winnersData.map((w, idx) => {
-    const answers = selected[idx].surveyResponse.answers as Record<string, unknown>;
+  // Fetch the newly created winners to avoid any mismatch and build previews from DB
+  const newWinners = await prisma.raffleWinner.findMany({
+    where: { raffleId: raffle.id, position: { gt: prevMax } },
+    orderBy: { position: 'asc' },
+    include: { raffleEntry: { include: { surveyResponse: true } } },
+  });
+
+  // Mark raffle as finished (stop accepting new participants)
+  try {
+    await prisma.raffle.update({ where: { id: raffle.id }, data: { isActive: false } });
+  } catch {
+    // ignore update errors; winners are still recorded
+  }
+
+  const winners = newWinners.map(w => {
+    const answers = w.raffleEntry.surveyResponse.answers as Record<string, unknown>;
     const preview: Record<string, unknown> = {};
     for (const k of raffle.publicDisplayQuestionIds) {
       preview[k] = answers[k];
