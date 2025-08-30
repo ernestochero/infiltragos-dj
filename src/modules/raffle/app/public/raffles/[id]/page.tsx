@@ -37,7 +37,7 @@ export default async function RafflePublicPage({ params }: { params: { id: strin
           {raffle.survey?.name || 'Sorteo'}
         </h1>
         {raffle.survey?.description && (
-          <p className="mx-auto mt-3 max-w-2xl text-sm text-muted-foreground sm:text-base">
+          <p className="mx-auto mt-3 max-w-2xl text-sm text-muted-foreground sm:text-base whitespace-pre-line">
             {raffle.survey.description}
           </p>
         )}

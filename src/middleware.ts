@@ -10,7 +10,7 @@ export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const session = await getSession(req);
 
-  const isDJRoute = pathname.startsWith('/dj');
+  const isDJAdminRoute = pathname.startsWith('/dj/admin');
   const isRequestsRoute = pathname.startsWith('/api/requests');
   const isSurveyAdminRoute = pathname.startsWith('/survey/admin');
   const isSurveyApiRoute = pathname.startsWith('/api/surveys');
@@ -22,7 +22,7 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  if (isDJRoute || isRequestsRoute) {
+  if (isDJAdminRoute || isRequestsRoute) {
     if (!session || (session.role !== 'DJ' && session.role !== 'ADMIN')) {
       return unauthorized(req, isRequestsRoute);
     }
@@ -41,7 +41,7 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    '/dj/:path*',
+    '/dj/admin/:path*',
     '/api/requests/:path*',
     '/survey/admin/:path*',
     '/api/surveys/:path*',
