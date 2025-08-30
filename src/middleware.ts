@@ -10,6 +10,28 @@ export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const session = await getSession(req);
 
+  // If the authenticated user is a DJ, restrict access strictly to the DJ module
+  // and specific APIs used by that module. Everything else is off-limits.
+  if (session?.role === 'DJ') {
+    const isApi = pathname.startsWith('/api/');
+    const allowedForDJ =
+      pathname === '/' ||
+      pathname.startsWith('/login') ||
+      pathname.startsWith('/dj') ||
+      pathname.startsWith('/queue') ||
+      pathname.startsWith('/now-playing') ||
+      pathname.startsWith('/qr') ||
+      pathname.startsWith('/api/requests') ||
+      pathname.startsWith('/api/spotify');
+
+    if (!allowedForDJ) {
+      // For API calls respond with 401, for pages redirect to DJ dashboard
+      if (isApi) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      const dest = pathname.startsWith('/admin') ? '/dj/admin' : '/dj';
+      return NextResponse.redirect(new URL(dest, req.url));
+    }
+  }
+
   const isDJAdminRoute = pathname.startsWith('/dj/admin');
   const isRequestsRoute = pathname.startsWith('/api/requests');
   const isSurveyAdminRoute = pathname.startsWith('/survey/admin');
@@ -40,11 +62,8 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
+  // Apply to all application routes, excluding Next internals and static assets
   matcher: [
-    '/dj/admin/:path*',
-    '/api/requests/:path*',
-    '/survey/admin/:path*',
-    '/api/surveys/:path*',
-    '/admin/:path*',
+    '/((?!_next|.*\\..*).*)',
   ],
 };
