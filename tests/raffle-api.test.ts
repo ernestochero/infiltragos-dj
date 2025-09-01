@@ -83,7 +83,12 @@ describe('raffle participate', () => {
 describe('raffle draw', () => {
   beforeEach(() => {
     mocked.raffle.findUnique.mockResolvedValue({ ...raffle, publicDisplayQuestionIds: [] });
-    mocked.raffleWinner.findMany.mockResolvedValue([]);
+    mocked.raffleWinner.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        { position: 1, raffleEntryId: 'e1', raffleEntry: { surveyResponse: { answers: { q1: 'A' } } } },
+        { position: 2, raffleEntryId: 'e2', raffleEntry: { surveyResponse: { answers: { q1: 'B' } } } },
+      ]);
     mocked.raffleEntry.findMany.mockResolvedValue([
       { id: 'e1', surveyResponse: { answers: { q1: 'A' } } },
       { id: 'e2', surveyResponse: { answers: { q1: 'B' } } },

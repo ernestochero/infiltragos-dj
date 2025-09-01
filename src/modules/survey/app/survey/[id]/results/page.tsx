@@ -5,6 +5,7 @@ import prisma from '@core/prisma';
 import Breadcrumbs from '@survey/components/nav/Breadcrumbs';
 import SurveyTabs from '@survey/components/nav/SurveyTabs';
 import Link from 'next/link';
+import ChartsSection from '@survey/components/charts/ChartsSection';
 
 interface Props {
   params: { id: string };
@@ -158,10 +159,7 @@ export default async function SurveyResultsPage({ params }: Props) {
         </div>
       </div>
 
-      <section className="mt-4 rounded-lg border border-slate-700/60 bg-slate-900/40 p-3">
-        <h2 className="mb-2 text-lg font-medium text-slate-100">Gráficos</h2>
-        <p className="text-sm text-slate-400">Próximamente: distribución de respuestas por pregunta.</p>
-      </section>
+      <ChartsSection slug={survey.slug} />
     </div>
   );
 }
