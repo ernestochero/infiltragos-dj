@@ -20,7 +20,7 @@ describe('survey analytics', () => {
       type: 'MULTIPLE_CHOICE',
       label: 'Frutas?',
       order: 2,
-       required: false,
+      required: false,
       options: [
         { id: 'o3', label: 'Manzana', value: 'apple', order: 1 },
         { id: 'o4', label: 'Plátano', value: 'banana', order: 2 },
