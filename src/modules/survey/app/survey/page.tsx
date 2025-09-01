@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import Modal from '@dj/components/modal';
 import Breadcrumbs from '@survey/components/nav/Breadcrumbs';
 
@@ -31,6 +32,7 @@ function StatusBadge({ status }: { status: SurveyItem['status'] }) {
 }
 
 export default function SurveyIndex() {
+  const router = useRouter();
   const [list, setList] = useState<SurveyItem[]>([]);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
@@ -99,6 +101,20 @@ export default function SurveyIndex() {
     if (!confirm('¿Seguro que deseas archivar esta encuesta?')) return;
     await fetch(`/api/surveys/${id}`, { method: 'DELETE' });
     fetchData();
+  };
+
+  const handleClone = async (id: string) => {
+    try {
+      const res = await fetch(`/api/surveys/${id}/clone`, { method: 'POST' });
+      if (!res.ok) {
+        alert('No se pudo clonar la encuesta');
+        return;
+      }
+      const data = (await res.json()) as { id: string };
+      router.push(`/survey/${data.id}/edit`);
+    } catch {
+      alert('Error al clonar');
+    }
   };
 
   const copyLink = async (slug: string, id: string) => {
@@ -271,6 +287,12 @@ export default function SurveyIndex() {
                     <div className="flex flex-wrap items-center gap-2">
                       <Link href={`/survey/${it.id}/edit`} className="rounded-md border border-white/10 px-2 py-1 text-xs text-blue-300 hover:bg-white/10">Editar</Link>
                       <Link href={`/survey/${it.id}/results`} className="rounded-md border border-white/10 px-2 py-1 text-xs text-blue-300 hover:bg-white/10">Resultados</Link>
+                      <button
+                        onClick={() => handleClone(it.id)}
+                        className="rounded-md border border-white/10 px-2 py-1 text-xs text-emerald-300 hover:bg-white/10"
+                      >
+                        Clonar
+                      </button>
                       <button
                         onClick={() => copyLink(it.slug, it.id)}
                         className="rounded-md border border-white/10 px-2 py-1 text-xs text-indigo-300 hover:bg-white/10"
