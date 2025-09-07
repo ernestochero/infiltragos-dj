@@ -12,3 +12,5 @@ prisma/migrations/migration_lock.toml
 
 # Local DB data
 data/
+
+.gocache/
