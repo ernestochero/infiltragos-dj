@@ -8,6 +8,10 @@ function unauthorized(req: NextRequest, isApi: boolean) {
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+  // Deja pasar preflights para evitar 405 antes del handler
+  if (req.method === 'OPTIONS') {
+    return NextResponse.next();
+  }
   const session = await getSession(req);
 
   // If the authenticated user is a DJ, restrict access strictly to the DJ module

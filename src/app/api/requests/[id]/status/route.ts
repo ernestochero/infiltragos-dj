@@ -45,3 +45,15 @@ export async function PATCH(
 export async function GET() {
   return NextResponse.json({ error: 'Method Not Allowed' }, { status: 405 });
 }
+
+// Permitir preflight para evitar abortos del navegador
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      Allow: 'PATCH, GET, OPTIONS',
+      'Access-Control-Allow-Methods': 'PATCH, GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    },
+  });
+}
