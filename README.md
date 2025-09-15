@@ -59,3 +59,20 @@ Create a folder under `src/modules/<name>` and mount any pages or API handlers u
 ### DJ services
 
 The DJ module exposes its API handlers in `src/app/api` and UI components under `src/modules/dj/components`.
+
+## Contests (Public Voting)
+
+This repository includes a starting point for public voting contests (band battles / rounds):
+
+- Models: `Contest`, `Contestant`, `Poll`, `PollContestant`, `PollVote` in `prisma/schema.prisma`.
+- Public API:
+  - `GET /api/polls/:id` → poll details, tallies, status and time remaining.
+  - `POST /api/polls/:id/vote` → body `{ contestantId }` registers a vote if active.
+- Admin API:
+  - `POST /api/admin/contests` (header `x-admin-token: $DJ_ADMIN_TOKEN`) to create a contest and optional first poll.
+- Public page: `src/modules/contest/app/public/contests/[contestId]/polls/[id]/page.tsx` with live updates via SWR.
+ - Admin pages: `/contest` (index), `/contest/new`, `/contest/[id]` to manage contestants, create polls, set `nextPollId/nextSlot`, and close/promote.
+
+Anti-abuse
+- Basic per-IP+UA and optional fingerprint cookie (`vfp`) deduplication.
+- In-memory rate limit (5 req/min per poll). Add Captcha if abuse is detected.
