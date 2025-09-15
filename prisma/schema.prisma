@@ -7,6 +7,87 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// === Voting/Contest module ===
+model Contest {
+  id          String       @id @default(cuid())
+  title       String
+  description String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  contestants Contestant[]
+  polls       Poll[]
+}
+
+model Contestant {
+  id        String   @id @default(cuid())
+  contestId String
+  contest   Contest  @relation(fields: [contestId], references: [id], onDelete: Cascade)
+  name      String
+  slug      String
+  photoUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([contestId, slug])
+  pollEntries PollContestant[]
+  votes       PollVote[]
+}
+
+model Poll {
+  id          String   @id @default(cuid())
+  contestId   String
+  contest     Contest  @relation(fields: [contestId], references: [id], onDelete: Cascade)
+  title       String
+  round       Int       @default(1)
+  startAt     DateTime
+  endAt       DateTime
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  contestants PollContestant[]
+  votes       PollVote[]
+
+  // Optional bracket linkage: winner goes to nextPoll at slot (1 or 2)
+  nextPollId  String?
+  nextSlot    Int?
+  nextPoll    Poll?     @relation("PollNext", fields: [nextPollId], references: [id])
+  previous    Poll[]    @relation("PollNext")
+
+  @@index([contestId, startAt])
+  @@index([contestId, endAt])
+}
+
+model PollContestant {
+  id           String      @id @default(cuid())
+  pollId       String
+  poll         Poll        @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  contestantId String
+  contestant   Contestant  @relation(fields: [contestantId], references: [id], onDelete: Cascade)
+  tally        Int         @default(0)
+
+  @@unique([pollId, contestantId])
+  @@index([pollId])
+}
+
+model PollVote {
+  id           String   @id @default(cuid())
+  pollId       String
+  poll         Poll     @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  contestantId String
+  contestant   Contestant @relation(fields: [contestantId], references: [id], onDelete: Cascade)
+  // Hashes used for duplicate prevention and basic anti-abuse.
+  voterFingerprintHash String?  @db.Char(64)
+  ipHash               String   @db.Char(64)
+  userAgentHash        String?  @db.Char(64)
+  createdAt            DateTime @default(now())
+
+  @@index([pollId, createdAt])
+  @@index([contestantId])
+  // One vote per person per poll (when fingerprint is present)
+  @@unique([pollId, voterFingerprintHash])
+}
+
 model Request {
   id              String        @id @default(cuid())
   songTitle       String

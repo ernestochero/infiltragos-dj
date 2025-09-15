@@ -22,9 +22,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
   }
   const { username, password, rememberMe } = parse.data;
-  const user = await prisma.user.findFirst({ where: { name: username } });
+  let user = await prisma.user.findFirst({ where: { name: username } });
+  // Dev-friendly: auto-create ADMIN/DJ users if they match env credentials
   if (!user) {
-    return NextResponse.json({ error: 'Invalid username or password' }, { status: 401 });
+    const envAdmin = process.env.ADMIN_USER || '';
+    const envDj = process.env.DJ_ADMIN_USER || '';
+    if (username === envAdmin) {
+      user = await prisma.user.create({ data: { name: envAdmin, role: UserRole.ADMIN } });
+    } else if (username === envDj) {
+      user = await prisma.user.create({ data: { name: envDj, role: UserRole.DJ } });
+    } else {
+      return NextResponse.json({ error: 'Invalid username or password' }, { status: 401 });
+    }
   }
 
   if (user.role === UserRole.PATRON) {
