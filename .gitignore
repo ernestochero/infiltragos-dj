@@ -14,3 +14,6 @@ prisma/migrations/migration_lock.toml
 data/
 
 .gocache/
+
+# Go binaries
+apps/wsp-webhook/wsp-webhook

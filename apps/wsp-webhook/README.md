@@ -74,3 +74,4 @@ Notes:
 - If `WSP_VERIFY_TOKEN` or `WSP_APP_SECRET` are missing, the process fails at startup.
 
 Note: `.env.local` is not used in this repo; prefer `.env` or system environment variables.
+

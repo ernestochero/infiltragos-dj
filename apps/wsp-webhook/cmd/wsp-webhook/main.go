@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"os"
 
-	handler "infiltragos-dj/api/wsp"
+	handler "infiltragos-dj/apps/wsp-webhook/api/wsp"
 )
 
 func main() {
