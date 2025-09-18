@@ -36,7 +36,7 @@ export default function FirstVisitModal({
     <Dialog open={isOpen} onClose={handleClose} className="relative z-50">
       <div className="fixed inset-0 bg-black/80 flex items-center justify-center">
         <div className="bg-white p-6 m-3 rounded-2xl shadow-xl max-w-md w-full">
-          <h2 className="text-3xl font-bold text-center text-indigo-600">
+          <h2 className="text-3xl font-bold text-center text-gray-900">
             {title}
           </h2>
           <p className="mt-3 text-xl text-gray-800 text-center whitespace-pre-line">
@@ -44,8 +44,8 @@ export default function FirstVisitModal({
           </p>
           <div className="mt-6 flex justify-center">
             <button
-              className="text-xl px-6 py-2 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition"
-              onClick={() => setIsOpen(false)}
+              className="text-xl px-6 py-2 rounded-lg bg-red-700 text-white font-medium hover:bg-indigo-700 transition"
+              onClick={handleClose}
             >
               {buttonText}
             </button>
