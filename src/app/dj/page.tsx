@@ -1,15 +1,18 @@
-'use client';
-import useSWR from 'swr';
-import { useState, useMemo } from 'react';
-import dynamic from 'next/dynamic';
-import Modal from '@dj/components/modal';
+"use client";
+import useSWR from "swr";
+import { useState, useMemo } from "react";
+import dynamic from "next/dynamic";
+import Modal from "@dj/components/modal";
+import FirstVisitModal from "../components/FirstVisitModal";
 
-const RequestForm = dynamic(() => import('@dj/components/request-form'), {
-  loading: () => <p className="text-slate-100 text-center">Cargando formulario…</p>,
+const RequestForm = dynamic(() => import("@dj/components/request-form"), {
+  loading: () => (
+    <p className="text-slate-100 text-center">Cargando formulario…</p>
+  ),
   ssr: false,
 });
 
-type RequestStatus = 'PENDING' | 'PLAYING' | 'DONE' | 'REJECTED';
+type RequestStatus = "PENDING" | "PLAYING" | "DONE" | "REJECTED";
 
 interface Request {
   id: string;
@@ -26,9 +29,13 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 export default function QueuePage() {
   // Fetch all, we will filter client-side. If you add server filtering, change the URL to /api/requests?status=all
-  const { data, isLoading, mutate } = useSWR<Request[]>('/api/requests', fetcher, {
-    refreshInterval: 8000,
-  });
+  const { data, isLoading, mutate } = useSWR<Request[]>(
+    "/api/requests",
+    fetcher,
+    {
+      refreshInterval: 8000,
+    }
+  );
 
   const [open, setOpen] = useState(false);
   const [toast, setToast] = useState(false);
@@ -44,17 +51,13 @@ export default function QueuePage() {
     const list = data ?? [];
 
     // Determine currently playing: pick the most recently updated or first PLAYING
-    const playing = list
-      .filter((r) => r.status === 'PLAYING')
-      // If you have updatedAt, prefer the latest:
-      // .sort((a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''))
-      [0];
+    const playing = list.filter((r) => r.status === "PLAYING")[0]; // .sort((a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? '')) // If you have updatedAt, prefer the latest:
 
     // Only PENDING for the visible queue. Sort by creation date asc (oldest first)
     const pendingSorted = list
-      .filter((r) => r.status === 'PENDING')
+      .filter((r) => r.status === "PENDING")
       .slice()
-      .sort((a, b) => (a.createdAt ?? '').localeCompare(b.createdAt ?? ''));
+      .sort((a, b) => (a.createdAt ?? "").localeCompare(b.createdAt ?? ""));
 
     return { nowPlaying: playing, pending: pendingSorted };
   }, [data]);
@@ -62,8 +65,12 @@ export default function QueuePage() {
   return (
     <main className="max-w-3xl mx-auto p-4 md:p-6">
       <header className="mb-6">
-        <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Cola De Canciones</h1>
-        <p className="text-sm text-slate-500">Solicitudes actualmente pendientes y qué se está reproduciendo ahora.</p>
+        <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
+          Cola De Canciones
+        </h1>
+        <p className="text-sm text-slate-500">
+          Solicitudes actualmente pendientes y qué se está reproduciendo ahora.
+        </p>
       </header>
       <div className="mb-6 flex justify-center">
         <button
@@ -76,7 +83,9 @@ export default function QueuePage() {
 
       {/* Now Playing */}
       <section aria-labelledby="now-playing" className="mb-6">
-        <h2 id="now-playing" className="sr-only">Now Playing</h2>
+        <h2 id="now-playing" className="sr-only">
+          Now Playing
+        </h2>
         {isLoading ? (
           <div className="animate-pulse rounded-lg border border-amber-300 bg-amber-50 p-4">
             <div className="h-4 w-40 bg-amber-200 rounded mb-2" />
@@ -94,11 +103,15 @@ export default function QueuePage() {
               </span>
             </div>
             <p className="mt-2 text-lg md:text-xl font-bold text-amber-900">
-              {nowPlaying.songTitle}{' '}
-              <span className="font-medium text-amber-800">— {nowPlaying.artist}</span>
+              {nowPlaying.songTitle}{" "}
+              <span className="font-medium text-amber-800">
+                — {nowPlaying.artist}
+              </span>
             </p>
             {nowPlaying.tableOrName && (
-              <p className="text-xs mt-1 text-amber-900/70">From: {nowPlaying.tableOrName}</p>
+              <p className="text-xs mt-1 text-amber-900/70">
+                From: {nowPlaying.tableOrName}
+              </p>
             )}
           </div>
         ) : (
@@ -117,7 +130,9 @@ export default function QueuePage() {
           >
             Solicitudes Pendientes
           </h2>
-          <span className="text-xs text-slate-500">{pending?.length ?? 0} items</span>
+          <span className="text-xs text-slate-500">
+            {pending?.length ?? 0} items
+          </span>
         </div>
 
         {isLoading ? (
@@ -133,20 +148,24 @@ export default function QueuePage() {
             ))}
           </ul>
         ) : pending && pending.length > 0 ? (
-            <ul className="space-y-2">
-              {pending.map((r: Request) => (
-                <li
-                  key={r.id}
-                  className="rounded border border-slate-200 bg-white p-3 hover:bg-slate-50 transition"
-                >
+          <ul className="space-y-2">
+            {pending.map((r: Request) => (
+              <li
+                key={r.id}
+                className="rounded border border-slate-200 bg-white p-3 hover:bg-slate-50 transition"
+              >
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <p className="truncate font-semibold text-slate-900">
-                      {r.songTitle}{' '}
-                      <span className="font-normal text-slate-700">— {r.artist}</span>
+                      {r.songTitle}{" "}
+                      <span className="font-normal text-slate-700">
+                        — {r.artist}
+                      </span>
                     </p>
                     {r.tableOrName && (
-                      <p className="text-xs text-slate-500 mt-0.5">From: {r.tableOrName}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        From: {r.tableOrName}
+                      </p>
                     )}
                   </div>
                   <span className="whitespace-nowrap text-xs font-medium text-slate-600">
@@ -169,6 +188,12 @@ export default function QueuePage() {
       >
         <RequestForm onSuccess={handleSuccess} />
       </Modal>
+      <FirstVisitModal
+        storageKey="welcomeSession"
+        title="🍸 Bienvenido a Infiltragos Music"
+        description="Aquí puedes pedir tus canciones favoritas para nuestras noches de karaoke o cuando el DJ esté en cabina. Solo busca tu canción, envíala y la podrás visualizar a la cola de pedidos. Es fácil, rápido y divertido: ¡tú eliges la música de la noche! 🍹🎤"
+        buttonText="¡Entendido!"
+      ></FirstVisitModal>
       {toast && (
         <div className="fixed bottom-4 right-4 rounded-md bg-emerald-600 text-white px-4 py-2 shadow-lg text-sm">
           Solicitud enviada
