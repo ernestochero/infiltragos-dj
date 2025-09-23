@@ -1,79 +1,88 @@
-import React, { useState } from 'react';
-import { render, fireEvent, screen, cleanup } from '@testing-library/react';
-import Modal from '@dj/components/modal';
-import { describe, it, expect, vi, afterEach } from 'vitest';
-import '@testing-library/jest-dom/vitest';
+import React, { useState } from "react";
+import { render, fireEvent, screen, cleanup } from "@testing-library/react";
+import ModalRequestForm from "@/modules/dj/components/ModalRequestForm";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import "@testing-library/jest-dom/vitest";
 
-describe('Modal', () => {
+describe("ModalRequestForm", () => {
   afterEach(() => cleanup());
-  it('calls onClose when pressing Escape', () => {
+
+  it("calls onClose when pressing Escape", () => {
     const handleClose = vi.fn();
     render(
-      <Modal open onClose={handleClose}>
-        <button>inside</button>
-      </Modal>
+      <ModalRequestForm open onClose={handleClose} onSuccess={() => {}} />
     );
-    fireEvent.keyDown(document, { key: 'Escape' });
+    fireEvent.keyDown(document, { key: "Escape" });
     expect(handleClose).toHaveBeenCalled();
   });
 
-  it('calls onClose when clicking the backdrop but not when clicking inside', () => {
+  it("calls onClose when clicking the backdrop but not when clicking inside", () => {
     const handleClose = vi.fn();
     render(
-      <Modal open onClose={handleClose}>
-        <button>inside</button>
-      </Modal>
+      <ModalRequestForm open onClose={handleClose} onSuccess={() => {}} />
     );
-    const dialog = screen.getByRole('dialog');
-    const backdrop = dialog.parentElement as HTMLElement;
+    // backdrop es el primer div con fixed y el modal es el hijo
+    const backdrop = document.querySelector(".fixed") as HTMLElement;
+    const modalBox = backdrop.querySelector(".bg-card-bg") as HTMLElement;
     fireEvent.click(backdrop);
     expect(handleClose).toHaveBeenCalledTimes(1);
     handleClose.mockClear();
-    fireEvent.click(dialog);
+    fireEvent.click(modalBox);
     expect(handleClose).not.toHaveBeenCalled();
   });
 
-  it('supports close button, focus trap, and restoring focus/scroll', () => {
+  it("focuses the song input on open and supports focus trap", () => {
     function Wrapper() {
       const [open, setOpen] = useState(false);
       return (
         <>
           <button onClick={() => setOpen(true)}>Open</button>
-          <Modal open={open} onClose={() => setOpen(false)} titleId="modal-title">
-            <h1 id="modal-title">Title</h1>
-            <button>Second</button>
-          </Modal>
+          <ModalRequestForm
+            open={open}
+            onClose={() => setOpen(false)}
+            onSuccess={() => {}}
+          />
         </>
       );
     }
 
     render(<Wrapper />);
-    const trigger = screen.getByText('Open');
+    const trigger = screen.getByText("Open");
     trigger.focus();
     fireEvent.click(trigger);
 
-    const dialog = screen.getByRole('dialog');
-    const closeBtn = dialog.querySelector('button') as HTMLButtonElement;
-    expect(closeBtn).toHaveFocus();
-    expect(document.body.style.overflow).toBe('hidden');
+    // Busca el input de canción
+    const songInput = screen.getByLabelText("Canción");
+    expect(songInput).toHaveFocus();
+    expect(document.body.style.overflow).toBe("hidden");
 
-    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
-    expect(screen.getByText('Second')).toHaveFocus();
-    fireEvent.keyDown(document, { key: 'Tab' });
+    // Focus trap: Shift+Tab desde el input va al botón de cerrar
+    fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
+    const closeBtn = screen.getByLabelText("Cerrar");
     expect(closeBtn).toHaveFocus();
 
+    // Tab desde el botón de cerrar vuelve al input
+    fireEvent.keyDown(document, { key: "Tab" });
+    expect(songInput).toHaveFocus();
+
+    // Cerrar modal con botón de cerrar
     fireEvent.click(closeBtn);
     expect(trigger).toHaveFocus();
-    expect(document.body.style.overflow).toBe('');
+    expect(document.body.style.overflow).toBe("");
   });
 
-  it('sets aria-labelledby when titleId is provided', () => {
+  it("sets aria-labelledby when titleId is provided", () => {
     render(
-      <Modal open onClose={() => {}} titleId="title-id">
-        <h1 id="title-id">My Title</h1>
-        <button>Ok</button>
-      </Modal>
+      <ModalRequestForm
+        open
+        onClose={() => {}}
+        onSuccess={() => {}}
+        titleId="title-id"
+        title="Mi Título"
+      />
     );
-    expect(screen.getByRole('dialog')).toHaveAttribute('aria-labelledby', 'title-id');
+    // Busca el Dialog por aria-labelledby
+    const dialog = document.querySelector('[aria-labelledby="title-id"]');
+    expect(dialog).toBeInTheDocument();
   });
 });

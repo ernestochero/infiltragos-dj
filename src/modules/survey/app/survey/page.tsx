@@ -1,31 +1,32 @@
-'use client';
-import { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import Modal from '@dj/components/modal';
-import Breadcrumbs from '@survey/components/nav/Breadcrumbs';
+"use client";
+import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import Modal from "@/modules/Modal";
+import Breadcrumbs from "@survey/components/nav/Breadcrumbs";
 
 type SurveyItem = {
   id: string;
   name: string;
   slug: string;
-  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' | string;
+  status: "DRAFT" | "PUBLISHED" | "ARCHIVED" | string;
   updatedAt: string;
   _count: { responses: number };
   raffle?: { id: string; isActive: boolean } | null;
 };
 
-function StatusBadge({ status }: { status: SurveyItem['status'] }) {
+function StatusBadge({ status }: { status: SurveyItem["status"] }) {
   const styles: Record<string, string> = {
-    DRAFT:
-      'bg-yellow-100 text-yellow-800 ring-1 ring-yellow-200',
-    PUBLISHED:
-      'bg-green-100 text-green-800 ring-1 ring-green-200',
-    ARCHIVED:
-      'bg-gray-100 text-gray-700 ring-1 ring-gray-200',
+    DRAFT: "bg-yellow-100 text-yellow-800 ring-1 ring-yellow-200",
+    PUBLISHED: "bg-green-100 text-green-800 ring-1 ring-green-200",
+    ARCHIVED: "bg-gray-100 text-gray-700 ring-1 ring-gray-200",
   };
   return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${styles[status] ?? 'bg-gray-100 text-gray-700 ring-1 ring-gray-200'}`}>
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+        styles[status] ?? "bg-gray-100 text-gray-700 ring-1 ring-gray-200"
+      }`}
+    >
       {status}
     </span>
   );
@@ -34,14 +35,22 @@ function StatusBadge({ status }: { status: SurveyItem['status'] }) {
 export default function SurveyIndex() {
   const router = useRouter();
   const [list, setList] = useState<SurveyItem[]>([]);
-  const [search, setSearch] = useState('');
-  const [status, setStatus] = useState('');
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
   const [loading, setLoading] = useState(false);
-  const [copied, setCopied] = useState<{ id: string; type: 'survey' | 'raffle' } | null>(null);
-  const [rafflesBySurveyId, setRafflesBySurveyId] = useState<Record<string, { id: string; isActive: boolean }>>({});
-  const [drawFor, setDrawFor] = useState<{ surveyId: string; raffleId: string } | null>(null);
+  const [copied, setCopied] = useState<{
+    id: string;
+    type: "survey" | "raffle";
+  } | null>(null);
+  const [rafflesBySurveyId, setRafflesBySurveyId] = useState<
+    Record<string, { id: string; isActive: boolean }>
+  >({});
+  const [drawFor, setDrawFor] = useState<{
+    surveyId: string;
+    raffleId: string;
+  } | null>(null);
   const [drawCount, setDrawCount] = useState(1);
   const [drawing, setDrawing] = useState(false);
 
@@ -49,10 +58,10 @@ export default function SurveyIndex() {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (search) params.set('q', search);
-      if (status) params.set('status', status);
-      if (from) params.set('from', from);
-      if (to) params.set('to', to);
+      if (search) params.set("q", search);
+      if (status) params.set("status", status);
+      if (from) params.set("from", from);
+      if (to) params.set("to", to);
       const res = await fetch(`/api/surveys?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
@@ -60,11 +69,15 @@ export default function SurveyIndex() {
         setList(items);
         // Fallback: build raffle map
         try {
-          const raffRes = await fetch('/api/raffles');
+          const raffRes = await fetch("/api/raffles");
           if (raffRes.ok) {
             const raffData = await raffRes.json();
             const map: Record<string, { id: string; isActive: boolean }> = {};
-            for (const r of raffData.items as Array<{ id: string; surveyId: string; isActive: boolean }>) {
+            for (const r of raffData.items as Array<{
+              id: string;
+              surveyId: string;
+              isActive: boolean;
+            }>) {
               map[r.surveyId] = { id: r.id, isActive: r.isActive };
             }
             setRafflesBySurveyId(map);
@@ -90,37 +103,39 @@ export default function SurveyIndex() {
   };
 
   const handleClear = () => {
-    setSearch('');
-    setStatus('');
-    setFrom('');
-    setTo('');
+    setSearch("");
+    setStatus("");
+    setFrom("");
+    setTo("");
     fetchData();
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Seguro que deseas archivar esta encuesta?')) return;
-    await fetch(`/api/surveys/${id}`, { method: 'DELETE' });
+    if (!confirm("¿Seguro que deseas archivar esta encuesta?")) return;
+    await fetch(`/api/surveys/${id}`, { method: "DELETE" });
     fetchData();
   };
 
   const handleClone = async (id: string) => {
     try {
-      const res = await fetch(`/api/surveys/${id}/clone`, { method: 'POST' });
+      const res = await fetch(`/api/surveys/${id}/clone`, { method: "POST" });
       if (!res.ok) {
-        alert('No se pudo clonar la encuesta');
+        alert("No se pudo clonar la encuesta");
         return;
       }
       const data = (await res.json()) as { id: string };
       router.push(`/survey/${data.id}/edit`);
     } catch {
-      alert('Error al clonar');
+      alert("Error al clonar");
     }
   };
 
   const copyLink = async (slug: string, id: string) => {
     try {
-      await navigator.clipboard.writeText(`${window.location.origin}/survey/${slug}`);
-      setCopied({ id, type: 'survey' });
+      await navigator.clipboard.writeText(
+        `${window.location.origin}/survey/${slug}`
+      );
+      setCopied({ id, type: "survey" });
       setTimeout(() => setCopied(null), 1500);
     } catch {
       // ignore
@@ -129,8 +144,10 @@ export default function SurveyIndex() {
 
   const copyRaffleLink = async (raffleId: string, id: string) => {
     try {
-      await navigator.clipboard.writeText(`${window.location.origin}/raffles/${raffleId}`);
-      setCopied({ id, type: 'raffle' });
+      await navigator.clipboard.writeText(
+        `${window.location.origin}/raffles/${raffleId}`
+      );
+      setCopied({ id, type: "raffle" });
       setTimeout(() => setCopied(null), 1500);
     } catch {
       // ignore
@@ -147,12 +164,12 @@ export default function SurveyIndex() {
     setDrawing(true);
     try {
       await fetch(`/api/raffles/${drawFor.raffleId}/draw`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        method: "POST",
+        headers: { "content-type": "application/json" },
         body: JSON.stringify({ count: drawCount }),
       });
       // Optionally open public reveal page in new tab
-      window.open(`/raffles/${drawFor.raffleId}`, '_blank');
+      window.open(`/raffles/${drawFor.raffleId}`, "_blank");
       setDrawFor(null);
     } finally {
       setDrawing(false);
@@ -161,203 +178,279 @@ export default function SurveyIndex() {
 
   return (
     <>
-    <div className="space-y-4">
-      <Breadcrumbs items={[{ label: 'Inicio', href: '/admin' }, { label: 'Surveys' }]} />
-      {/* Filters */}
-      <div className="rounded-lg border border-white/10 bg-white/5 p-4 backdrop-blur sm:p-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <form onSubmit={handleSearch} className="grid w-full grid-cols-1 gap-3 sm:grid-cols-5">
-            <div className="col-span-2">
-              <label className="mb-1 block text-xs font-medium text-gray-300">Buscar</label>
-              <div className="relative">
-                <svg className="pointer-events-none absolute left-2 top-2.5 h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M12.9 14.32a8 8 0 111.414-1.414l4.387 4.387a1 1 0 01-1.414 1.414l-4.387-4.387zM14 8a6 6 0 11-12 0 6 6 0 0112 0z" clipRule="evenodd"/></svg>
+      <div className="space-y-4">
+        <Breadcrumbs
+          items={[{ label: "Inicio", href: "/admin" }, { label: "Surveys" }]}
+        />
+        {/* Filters */}
+        <div className="rounded-lg border border-white/10 bg-white/5 p-4 backdrop-blur sm:p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <form
+              onSubmit={handleSearch}
+              className="grid w-full grid-cols-1 gap-3 sm:grid-cols-5"
+            >
+              <div className="col-span-2">
+                <label className="mb-1 block text-xs font-medium text-gray-300">
+                  Buscar
+                </label>
+                <div className="relative">
+                  <svg
+                    className="pointer-events-none absolute left-2 top-2.5 h-4 w-4 text-gray-400"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M12.9 14.32a8 8 0 111.414-1.414l4.387 4.387a1 1 0 01-1.414 1.414l-4.387-4.387zM14 8a6 6 0 11-12 0 6 6 0 0112 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <input
+                    className="w-full rounded-md border border-white/10 bg-black/30 px-8 py-2 text-sm text-gray-100 placeholder-gray-400 focus:border-indigo-400 focus:outline-none"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Nombre o slug"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-300">
+                  Estado
+                </label>
+                <select
+                  className="w-full rounded-md border border-white/10 bg-black/30 px-2 py-2 text-sm text-gray-100 focus:border-indigo-400 focus:outline-none"
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value)}
+                >
+                  <option value="">Todos</option>
+                  <option value="DRAFT">DRAFT</option>
+                  <option value="PUBLISHED">PUBLISHED</option>
+                  <option value="ARCHIVED">ARCHIVED</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-300">
+                  Desde
+                </label>
                 <input
-                  className="w-full rounded-md border border-white/10 bg-black/30 px-8 py-2 text-sm text-gray-100 placeholder-gray-400 focus:border-indigo-400 focus:outline-none"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Nombre o slug"
+                  type="date"
+                  className="w-full rounded-md border border-white/10 bg-black/30 px-2 py-2 text-sm text-gray-100 focus:border-indigo-400 focus:outline-none"
+                  value={from}
+                  onChange={(e) => setFrom(e.target.value)}
                 />
               </div>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-300">Estado</label>
-              <select
-                className="w-full rounded-md border border-white/10 bg-black/30 px-2 py-2 text-sm text-gray-100 focus:border-indigo-400 focus:outline-none"
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-              >
-                <option value="">Todos</option>
-                <option value="DRAFT">DRAFT</option>
-                <option value="PUBLISHED">PUBLISHED</option>
-                <option value="ARCHIVED">ARCHIVED</option>
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-300">Desde</label>
-              <input
-                type="date"
-                className="w-full rounded-md border border-white/10 bg-black/30 px-2 py-2 text-sm text-gray-100 focus:border-indigo-400 focus:outline-none"
-                value={from}
-                onChange={(e) => setFrom(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-300">Hasta</label>
-              <input
-                type="date"
-                className="w-full rounded-md border border-white/10 bg-black/30 px-2 py-2 text-sm text-gray-100 focus:border-indigo-400 focus:outline-none"
-                value={to}
-                onChange={(e) => setTo(e.target.value)}
-              />
-            </div>
-            <div className="col-span-1 flex items-end gap-2">
-              <button
-                type="submit"
-                className="inline-flex w-full items-center justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-500 focus:outline-none"
-              >
-                Filtrar
-              </button>
-              <button
-                type="button"
-                onClick={handleClear}
-                className="inline-flex items-center justify-center rounded-md border border-white/10 px-3 py-2 text-sm font-medium text-gray-200 hover:bg-white/10"
-              >
-                Limpiar
-              </button>
-            </div>
-          </form>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-300">
+                  Hasta
+                </label>
+                <input
+                  type="date"
+                  className="w-full rounded-md border border-white/10 bg-black/30 px-2 py-2 text-sm text-gray-100 focus:border-indigo-400 focus:outline-none"
+                  value={to}
+                  onChange={(e) => setTo(e.target.value)}
+                />
+              </div>
+              <div className="col-span-1 flex items-end gap-2">
+                <button
+                  type="submit"
+                  className="inline-flex w-full items-center justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-500 focus:outline-none"
+                >
+                  Filtrar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleClear}
+                  className="inline-flex items-center justify-center rounded-md border border-white/10 px-3 py-2 text-sm font-medium text-gray-200 hover:bg-white/10"
+                >
+                  Limpiar
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
-      </div>
 
-      {/* Table */}
-      <div className="overflow-hidden rounded-lg border border-white/10 shadow">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-white/10 text-sm">
-            <thead className="bg-white/5 text-left text-xs uppercase tracking-wider text-gray-300">
-              <tr>
-                <th className="px-4 py-3">Nombre</th>
-                <th className="px-4 py-3">Slug</th>
-                <th className="px-4 py-3">Estado</th>
-                <th className="px-4 py-3">Actualizado</th>
-                <th className="px-4 py-3">Respuestas</th>
-                <th className="px-4 py-3">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/10 bg-black/20">
-              {loading && (
+        {/* Table */}
+        <div className="overflow-hidden rounded-lg border border-white/10 shadow">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-white/10 text-sm">
+              <thead className="bg-white/5 text-left text-xs uppercase tracking-wider text-gray-300">
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
-                    Cargando encuestas…
-                  </td>
+                  <th className="px-4 py-3">Nombre</th>
+                  <th className="px-4 py-3">Slug</th>
+                  <th className="px-4 py-3">Estado</th>
+                  <th className="px-4 py-3">Actualizado</th>
+                  <th className="px-4 py-3">Respuestas</th>
+                  <th className="px-4 py-3">Acciones</th>
                 </tr>
-              )}
-              {!loading && list.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-gray-400">
-                    No hay encuestas con los filtros aplicados.
-                    <div className="mt-3">
-                      <Link href="/survey/new" className="rounded-md bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-500">Crear la primera</Link>
-                    </div>
-                  </td>
-                </tr>
-              )}
-              {list.map((it) => (
-                <tr key={it.id} className="hover:bg-white/5">
-                  <td className="whitespace-nowrap px-4 py-3 font-medium text-gray-100">
-                    <span>{it.name}</span>
-                    {(() => {
-                      const r = it.raffle ?? rafflesBySurveyId[it.id];
-                      if (!r) return null;
-                      return r.isActive ? (
-                        <span className="ml-2 inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800 ring-1 ring-emerald-200">
-                          SORTEO ACTIVO
-                        </span>
-                      ) : (
-                        <span className="ml-2 inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800 ring-1 ring-gray-200">
-                          SORTEO INACTIVO
-                        </span>
-                      );
-                    })()}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-gray-300">{it.slug}</td>
-                  <td className="whitespace-nowrap px-4 py-3"><StatusBadge status={it.status} /></td>
-                  <td className="whitespace-nowrap px-4 py-3 text-gray-300">{new Date(it.updatedAt).toLocaleString()}</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-gray-300">{it._count.responses}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Link href={`/survey/${it.id}/edit`} className="rounded-md border border-white/10 px-2 py-1 text-xs text-blue-300 hover:bg-white/10">Editar</Link>
-                      <Link href={`/survey/${it.id}/results`} className="rounded-md border border-white/10 px-2 py-1 text-xs text-blue-300 hover:bg-white/10">Resultados</Link>
-                      <button
-                        onClick={() => handleClone(it.id)}
-                        className="rounded-md border border-white/10 px-2 py-1 text-xs text-emerald-300 hover:bg-white/10"
-                      >
-                        Clonar
-                      </button>
-                      <button
-                        onClick={() => copyLink(it.slug, it.id)}
-                        className="rounded-md border border-white/10 px-2 py-1 text-xs text-indigo-300 hover:bg-white/10"
-                      >
-                        {copied?.id === it.id && copied?.type === 'survey' ? '¡Copiado!' : 'Copiar enlace'}
-                      </button>
-                      {(it.raffle || rafflesBySurveyId[it.id]) && (
-                        <button
-                          onClick={() => copyRaffleLink((it.raffle?.id ?? rafflesBySurveyId[it.id].id), it.id)}
-                          className="rounded-md border border-emerald-900/40 bg-emerald-950/40 px-2 py-1 text-xs text-emerald-300 hover:bg-emerald-900/30"
+              </thead>
+              <tbody className="divide-y divide-white/10 bg-black/20">
+                {loading && (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="px-4 py-8 text-center text-gray-400"
+                    >
+                      Cargando encuestas…
+                    </td>
+                  </tr>
+                )}
+                {!loading && list.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="px-4 py-10 text-center text-gray-400"
+                    >
+                      No hay encuestas con los filtros aplicados.
+                      <div className="mt-3">
+                        <Link
+                          href="/survey/new"
+                          className="rounded-md bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-500"
                         >
-                          {copied?.id === it.id && copied?.type === 'raffle' ? '¡Copiado!' : 'Copiar enlace sorteo'}
-                        </button>
-                      )}
-                      {(it.raffle || rafflesBySurveyId[it.id]) && (
-                        <button
-                          onClick={() => openDrawModal(it.id, (it.raffle?.id ?? rafflesBySurveyId[it.id].id))}
-                          className="rounded-md border border-amber-900/40 bg-amber-950/40 px-2 py-1 text-xs text-amber-300 hover:bg-amber-900/30"
+                          Crear la primera
+                        </Link>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                {list.map((it) => (
+                  <tr key={it.id} className="hover:bg-white/5">
+                    <td className="whitespace-nowrap px-4 py-3 font-medium text-gray-100">
+                      <span>{it.name}</span>
+                      {(() => {
+                        const r = it.raffle ?? rafflesBySurveyId[it.id];
+                        if (!r) return null;
+                        return r.isActive ? (
+                          <span className="ml-2 inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800 ring-1 ring-emerald-200">
+                            SORTEO ACTIVO
+                          </span>
+                        ) : (
+                          <span className="ml-2 inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800 ring-1 ring-gray-200">
+                            SORTEO INACTIVO
+                          </span>
+                        );
+                      })()}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-gray-300">
+                      {it.slug}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <StatusBadge status={it.status} />
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-gray-300">
+                      {new Date(it.updatedAt).toLocaleString()}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-gray-300">
+                      {it._count.responses}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Link
+                          href={`/survey/${it.id}/edit`}
+                          className="rounded-md border border-white/10 px-2 py-1 text-xs text-blue-300 hover:bg-white/10"
                         >
-                          Elegir ganadores
+                          Editar
+                        </Link>
+                        <Link
+                          href={`/survey/${it.id}/results`}
+                          className="rounded-md border border-white/10 px-2 py-1 text-xs text-blue-300 hover:bg-white/10"
+                        >
+                          Resultados
+                        </Link>
+                        <button
+                          onClick={() => handleClone(it.id)}
+                          className="rounded-md border border-white/10 px-2 py-1 text-xs text-emerald-300 hover:bg-white/10"
+                        >
+                          Clonar
                         </button>
-                      )}
-                      <button
-                        onClick={() => handleDelete(it.id)}
-                        className="rounded-md border border-white/10 px-2 py-1 text-xs text-red-300 hover:bg-white/10"
-                      >
-                        Eliminar
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                        <button
+                          onClick={() => copyLink(it.slug, it.id)}
+                          className="rounded-md border border-white/10 px-2 py-1 text-xs text-indigo-300 hover:bg-white/10"
+                        >
+                          {copied?.id === it.id && copied?.type === "survey"
+                            ? "¡Copiado!"
+                            : "Copiar enlace"}
+                        </button>
+                        {(it.raffle || rafflesBySurveyId[it.id]) && (
+                          <button
+                            onClick={() =>
+                              copyRaffleLink(
+                                it.raffle?.id ?? rafflesBySurveyId[it.id].id,
+                                it.id
+                              )
+                            }
+                            className="rounded-md border border-emerald-900/40 bg-emerald-950/40 px-2 py-1 text-xs text-emerald-300 hover:bg-emerald-900/30"
+                          >
+                            {copied?.id === it.id && copied?.type === "raffle"
+                              ? "¡Copiado!"
+                              : "Copiar enlace sorteo"}
+                          </button>
+                        )}
+                        {(it.raffle || rafflesBySurveyId[it.id]) && (
+                          <button
+                            onClick={() =>
+                              openDrawModal(
+                                it.id,
+                                it.raffle?.id ?? rafflesBySurveyId[it.id].id
+                              )
+                            }
+                            className="rounded-md border border-amber-900/40 bg-amber-950/40 px-2 py-1 text-xs text-amber-300 hover:bg-amber-900/30"
+                          >
+                            Elegir ganadores
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleDelete(it.id)}
+                          className="rounded-md border border-white/10 px-2 py-1 text-xs text-red-300 hover:bg-white/10"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
-    </div>
-    <Modal open={!!drawFor} onClose={() => setDrawFor(null)} titleId="draw-modal-title">
-      <h2 id="draw-modal-title" className="text-lg font-bold mb-2">Elegir ganadores</h2>
-      <p className="text-xs text-slate-400 mb-3">Ingresa el número de ganadores a sortear.</p>
-      <div className="mb-4">
-        <input
-          type="number"
-          min={1}
-          value={drawCount}
-          onChange={e => setDrawCount(Math.max(1, Number(e.target.value) || 1))}
-          className="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-gray-100 focus:border-amber-400 focus:outline-none"
-        />
-      </div>
-      <div className="flex justify-end gap-2">
-        <button
-          onClick={() => setDrawFor(null)}
-          className="rounded-md border border-white/10 px-3 py-2 text-sm text-gray-200 hover:bg-white/10"
-        >
-          Cancelar
-        </button>
-        <button
-          onClick={runDraw}
-          disabled={drawing}
-          className="rounded-md bg-amber-600 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-amber-500 disabled:opacity-60"
-        >
-          {drawing ? 'Sorteando…' : 'Sortear'}
-        </button>
-      </div>
-    </Modal>
+      <Modal
+        open={!!drawFor}
+        onClose={() => setDrawFor(null)}
+        titleId="draw-modal-title"
+      >
+        <h2 id="draw-modal-title" className="text-lg font-bold mb-2">
+          Elegir ganadores
+        </h2>
+        <p className="text-xs text-slate-400 mb-3">
+          Ingresa el número de ganadores a sortear.
+        </p>
+        <div className="mb-4">
+          <input
+            type="number"
+            min={1}
+            value={drawCount}
+            onChange={(e) =>
+              setDrawCount(Math.max(1, Number(e.target.value) || 1))
+            }
+            className="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-gray-100 focus:border-amber-400 focus:outline-none"
+          />
+        </div>
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={() => setDrawFor(null)}
+            className="rounded-md border border-white/10 px-3 py-2 text-sm text-gray-200 hover:bg-white/10"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={runDraw}
+            disabled={drawing}
+            className="rounded-md bg-amber-600 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-amber-500 disabled:opacity-60"
+          >
+            {drawing ? "Sorteando…" : "Sortear"}
+          </button>
+        </div>
+      </Modal>
     </>
   );
 }

@@ -1,7 +1,8 @@
-'use client';
+"use client";
 
-import { useEffect, useRef, useState } from 'react';
-import { TrackSuggestion } from '@dj/types/spotify';
+import { useEffect, useRef, useState } from "react";
+import { TrackSuggestion } from "@dj/types/spotify";
+import { FaMusic } from "react-icons/fa";
 
 interface Props {
   value: string;
@@ -9,19 +10,21 @@ interface Props {
   onValueChange: (v: string) => void;
   onArtistChange: (v: string) => void;
   onTrackSelect: (track: TrackSuggestion | null) => void;
+  maxLengthSongTitle: number;
 }
 
-export default function SongAutocomplete({
+export default function SongAutoComplete({
   value,
   disabled,
   onValueChange,
   onArtistChange,
   onTrackSelect,
+  maxLengthSongTitle,
 }: Props) {
   const [suggestions, setSuggestions] = useState<TrackSuggestion[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [highlight, setHighlight] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
   const suppressNextFetchRef = useRef(false);
@@ -44,13 +47,16 @@ export default function SongAutocomplete({
       const controller = new AbortController();
       abortRef.current = controller;
       setLoading(true);
-      setError('');
+      setError("");
       try {
-        const res = await fetch(`/api/spotify/search?q=${encodeURIComponent(value)}`, {
-          signal: controller.signal,
-        });
+        const res = await fetch(
+          `/api/spotify/search?q=${encodeURIComponent(value)}`,
+          {
+            signal: controller.signal,
+          }
+        );
         if (res.status === 429) {
-          setError('Demasiadas búsquedas, intenta en unos segundos');
+          setError("Demasiadas búsquedas, intenta en unos segundos");
           setSuggestions([]);
         } else if (res.ok) {
           const data = (await res.json()) as { tracks: TrackSuggestion[] };
@@ -59,7 +65,8 @@ export default function SongAutocomplete({
           setHighlight(0);
         }
       } catch {
-        // ignore errors
+        setError("Error de red o del servidor.");
+        setSuggestions([]);
       } finally {
         setLoading(false);
       }
@@ -78,13 +85,13 @@ export default function SongAutocomplete({
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (!open || suggestions.length === 0) return;
-    if (e.key === 'ArrowDown') {
+    if (e.key === "ArrowDown") {
       e.preventDefault();
       setHighlight((h) => (h + 1) % suggestions.length);
-    } else if (e.key === 'ArrowUp') {
+    } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setHighlight((h) => (h - 1 + suggestions.length) % suggestions.length);
-    } else if (e.key === 'Enter') {
+    } else if (e.key === "Enter") {
       e.preventDefault();
       const track = suggestions[highlight];
       if (track) select(track);
@@ -96,7 +103,8 @@ export default function SongAutocomplete({
   }
 
   return (
-    <div className="relative">
+    <div className="relative w-full">
+      <FaMusic className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
       <input
         id="song_title"
         name="song_title"
@@ -109,27 +117,31 @@ export default function SongAutocomplete({
         onFocus={() => suggestions.length > 0 && setOpen(true)}
         onBlur={handleBlur}
         placeholder="Ej. Blinding Lights"
-        className="w-full rounded-lg border border-slate-700 bg-slate-800 text-slate-100 placeholder-slate-400 px-3 py-2 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-600"
-        required
-        maxLength={100}
+        className="w-full rounded-lg border border-gray-700 bg-gray-800 text-white placeholder-gray-400 pl-10 pr-3 py-2 outline-none focus:border-accent focus:ring-2 focus:ring-accent"
+        maxLength={maxLengthSongTitle}
         disabled={disabled}
         autoComplete="off"
       />
       {open && (
         <ul className="absolute z-10 mt-1 w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 shadow-lg max-h-60 overflow-auto">
           {loading && <li className="p-2 text-sm text-slate-400">Buscando…</li>}
-          {!loading && error && <li className="p-2 text-sm text-rose-300">{error}</li>}
-          {!loading && !error &&
+          {!loading && error && (
+            <li className="p-2 text-sm text-rose-300">{error}</li>
+          )}
+          {!loading &&
+            !error &&
             suggestions.map((s, i) => (
               <li
                 key={s.id}
-                className={`p-2 cursor-pointer ${i === highlight ? 'bg-slate-700' : ''}`}
+                className={`p-2 cursor-pointer ${
+                  i === highlight ? "bg-slate-700" : ""
+                }`}
                 onMouseDown={(e) => {
                   e.preventDefault();
                   select(s);
                 }}
               >
-                <span className="font-medium">{s.name}</span>{' '}
+                <span className="font-medium">{s.name}</span>{" "}
                 <span className="text-slate-400 text-sm">{s.artist}</span>
               </li>
             ))}

@@ -2,15 +2,18 @@
 import useSWR from "swr";
 import { useState, useMemo } from "react";
 import dynamic from "next/dynamic";
-import Modal from "@dj/components/modal";
-import FirstVisitModal from "../components/FirstVisitModal";
+import FirstVisitModal from "../../modules/dj/components/FirstVisitModal";
+import { FaPlayCircle, FaThumbsUp, FaMusic } from "react-icons/fa";
 
-const RequestForm = dynamic(() => import("@dj/components/request-form"), {
-  loading: () => (
-    <p className="text-slate-100 text-center">Cargando formulario…</p>
-  ),
-  ssr: false,
-});
+const ModalRequestForm = dynamic(
+  () => import("@/modules/dj/components/ModalRequestForm"),
+  {
+    loading: () => (
+      <p className="text-gray-300 text-center">Cargando formulario…</p>
+    ),
+    ssr: false,
+  }
+);
 
 type RequestStatus = "PENDING" | "PLAYING" | "DONE" | "REJECTED";
 
@@ -22,13 +25,11 @@ interface Request {
   status: RequestStatus;
   tableOrName?: string;
   createdAt?: string;
-  // updatedAt?: string;
 }
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 export default function QueuePage() {
-  // Fetch all, we will filter client-side. If you add server filtering, change the URL to /api/requests?status=all
   const { data, isLoading, mutate } = useSWR<Request[]>(
     "/api/requests",
     fetcher,
@@ -49,156 +50,156 @@ export default function QueuePage() {
 
   const { nowPlaying, pending } = useMemo(() => {
     const list = data ?? [];
-
-    // Determine currently playing: pick the most recently updated or first PLAYING
-    const playing = list.filter((r) => r.status === "PLAYING")[0]; // .sort((a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? '')) // If you have updatedAt, prefer the latest:
-
-    // Only PENDING for the visible queue. Sort by creation date asc (oldest first)
+    const playing = list.find((r) => r.status === "PLAYING");
     const pendingSorted = list
       .filter((r) => r.status === "PENDING")
-      .slice()
       .sort((a, b) => (a.createdAt ?? "").localeCompare(b.createdAt ?? ""));
-
     return { nowPlaying: playing, pending: pendingSorted };
   }, [data]);
 
   return (
-    <main className="max-w-3xl mx-auto p-4 md:p-6">
-      <header className="mb-6">
-        <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-          Cola De Canciones
-        </h1>
-        <p className="text-sm text-slate-500">
-          Solicitudes actualmente pendientes y qué se está reproduciendo ahora.
-        </p>
-      </header>
-      <div className="mb-6 flex justify-center">
-        <button
-          onClick={() => setOpen(true)}
-          className="inline-flex items-center gap-2 rounded-md bg-amber-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-amber-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500 transition"
-        >
-          🎵 Pedir una Canción
-        </button>
-      </div>
-
-      {/* Now Playing */}
-      <section aria-labelledby="now-playing" className="mb-6">
-        <h2 id="now-playing" className="sr-only">
-          Now Playing
-        </h2>
-        {isLoading ? (
-          <div className="animate-pulse rounded-lg border border-amber-300 bg-amber-50 p-4">
-            <div className="h-4 w-40 bg-amber-200 rounded mb-2" />
-            <div className="h-3 w-64 bg-amber-200 rounded" />
-          </div>
-        ) : nowPlaying ? (
-          <div className="rounded-lg border border-amber-300 bg-amber-50 p-4">
-            <div className="flex items-center justify-between">
-              <span className="inline-flex items-center gap-2 text-amber-900 font-semibold">
-                <span className="inline-block h-2.5 w-2.5 rounded-full bg-amber-500 animate-pulse" />
-                Reproduciendo
-              </span>
-              <span className="text-xs text-amber-900/70 font-medium">
-                👍 {nowPlaying.votes} votos
-              </span>
-            </div>
-            <p className="mt-2 text-lg md:text-xl font-bold text-amber-900">
-              {nowPlaying.songTitle}{" "}
-              <span className="font-medium text-amber-800">
-                — {nowPlaying.artist}
-              </span>
-            </p>
-            {nowPlaying.tableOrName && (
-              <p className="text-xs mt-1 text-amber-900/70">
-                From: {nowPlaying.tableOrName}
-              </p>
-            )}
-          </div>
-        ) : (
-          <div className="rounded-lg border border-slate-200 bg-white p-4 text-slate-500">
-            Nothing is playing right now.
-          </div>
-        )}
-      </section>
-
-      {/* Pending Queue */}
-      <section aria-labelledby="pending-queue">
-        <div className="flex items-baseline justify-between mb-3">
-          <h2
-            id="pending-queue"
-            className="text-xl font-extrabold text-slate-100 tracking-wide uppercase"
+    <main className="bg-dark-bg min-h-screen text-white p-4 md:p-6">
+      <div className="max-w-3xl mx-auto">
+        <header className="mb-6 text-center">
+          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">
+            Infiltragos Music
+          </h1>
+          <p className="text-sm md:text-base text-gray-400 mt-2">
+            ¡Acompaña tus tragos con la mejor música a un solo click!
+          </p>
+        </header>
+        <div className="mb-8 flex justify-center">
+          <button
+            onClick={() => setOpen(true)}
+            className="inline-flex items-center gap-2 rounded-full bg-accent px-6 py-3 text-sm font-semibold text-dark-bg shadow-lg transition-all duration-300 hover:bg-accent-hover hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-hover focus-visible:ring-offset-2 focus-visible:ring-offset-dark-bg"
           >
-            Solicitudes Pendientes
-          </h2>
-          <span className="text-xs text-slate-500">
-            {pending?.length ?? 0} items
-          </span>
+            🎵 Pedir una Canción
+          </button>
         </div>
 
-        {isLoading ? (
-          <ul className="space-y-2">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <li
-                key={i}
-                className="animate-pulse rounded border border-slate-200 bg-white p-3"
-              >
-                <div className="h-4 w-56 bg-slate-200 rounded mb-2" />
-                <div className="h-3 w-24 bg-slate-200 rounded" />
-              </li>
-            ))}
-          </ul>
-        ) : pending && pending.length > 0 ? (
-          <ul className="space-y-2">
-            {pending.map((r: Request) => (
-              <li
-                key={r.id}
-                className="rounded border border-slate-200 bg-white p-3 hover:bg-slate-50 transition"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate font-semibold text-slate-900">
-                      {r.songTitle}{" "}
-                      <span className="font-normal text-slate-700">
-                        — {r.artist}
-                      </span>
-                    </p>
-                    {r.tableOrName && (
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        From: {r.tableOrName}
-                      </p>
-                    )}
-                  </div>
-                  <span className="whitespace-nowrap text-xs font-medium text-slate-600">
-                    👍 {r.votes} votos
+        {/* Reproduciendo Ahora */}
+        <section aria-labelledby="now-playing" className="mb-8">
+          <h2 id="now-playing" className="sr-only">
+            Reproduciendo Ahora
+          </h2>
+          {isLoading ? (
+            <div className="animate-pulse rounded-xl bg-card-bg p-6 h-32" />
+          ) : nowPlaying ? (
+            <div className="rounded-xl bg-card-bg p-6 flex items-center gap-6 relative overflow-hidden group">
+              <div className="absolute inset-0 bg-gradient-to-br from-accent/10 via-transparent to-transparent opacity-50 z-0"></div>
+              <div className="w-20 h-20 bg-gray-700 rounded-lg flex items-center justify-center flex-shrink-0 z-10">
+                <FaPlayCircle className="text-5xl text-accent opacity-80 animate-pulse" />
+              </div>
+              <div className="flex-grow z-10">
+                <span className="inline-flex items-center gap-2 text-accent text-sm font-semibold uppercase">
+                  <span className="inline-block h-2 w-2 rounded-full bg-accent animate-pulse" />
+                  Reproduciendo
+                </span>
+                <p className="mt-1 text-2xl font-bold text-white">
+                  {nowPlaying.songTitle}{" "}
+                  <span className="font-medium text-gray-400">
+                    - {nowPlaying.artist}
                   </span>
-                </div>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <div className="rounded-lg border border-slate-200 bg-white p-4 text-slate-500">
-            Sin Solicitudes Pendientes.
+                </p>
+                {nowPlaying.tableOrName && (
+                  <p className="text-sm mt-1 text-gray-500">
+                    De: {nowPlaying.tableOrName}
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center gap-1 text-xl font-bold text-gray-400 hover:text-accent transition-colors duration-300 z-10 cursor-pointer">
+                <FaThumbsUp />
+                <span>{nowPlaying.votes}</span>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-xl bg-card-bg p-6 text-gray-500 text-center">
+              Sin reproducciones actualmente.
+            </div>
+          )}
+        </section>
+
+        {/* Solicitudes Pendientes */}
+        <section aria-labelledby="pending-queue">
+          <div className="flex items-baseline justify-between mb-4">
+            <h2
+              id="pending-queue"
+              className="text-xl font-extrabold text-white tracking-wide"
+            >
+              Cola de Pedidos
+            </h2>
+            <span className="text-sm text-gray-500">
+              {pending?.length ?? 0} items
+            </span>
+          </div>
+
+          {isLoading ? (
+            <div className="space-y-3 p-4 bg-card-bg rounded-xl">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="animate-pulse rounded-lg bg-gray-700 p-4 h-16"
+                />
+              ))}
+            </div>
+          ) : pending && pending.length > 0 ? (
+            <ul className="space-y-3 p-4 bg-card-bg rounded-xl max-h-96 overflow-y-auto overflow-x-hidden">
+              {pending.map((r: Request, index: number) => (
+                <li
+                  key={r.id}
+                  className="rounded-lg bg-gray-700/50 p-4 hover:bg-gray-700/70 transition-colors duration-200 cursor-pointer"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-white">
+                        <span className="text-gray-400 font-bold mr-2">
+                          {index + 1}.
+                        </span>
+                        {r.songTitle}{" "}
+                        <span className="font-normal text-gray-400">
+                          - {r.artist}
+                        </span>
+                      </p>
+                      {r.tableOrName && (
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          De: {r.tableOrName}
+                        </p>
+                      )}
+                    </div>
+                    <span className="whitespace-nowrap text-xs font-medium text-gray-400">
+                      👍 {r.votes} votos
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="rounded-xl bg-card-bg p-6 text-gray-500 text-center">
+              <FaMusic className="text-6xl text-gray-700 mx-auto mb-4" />
+              <p>Sin Solicitudes Pendientes.</p>
+            </div>
+          )}
+        </section>
+
+        <ModalRequestForm
+          open={open}
+          onClose={() => setOpen(false)}
+          titleId="request-form-title"
+          title="Nuevo Pedido"
+          onSuccess={handleSuccess}
+        />
+        <FirstVisitModal
+          storageKey="welcomeSession"
+          title="🍸 Bienvenido a Infiltragos Music"
+          description="Aquí puedes pedir tus canciones favoritas para nuestras noches de karaoke o cuando el DJ esté en cabina. Solo busca tu canción, pídela y la podrás visualizar a la cola de pedidos. Es fácil, rápido y divertido: ¡tú eliges la música de la noche! 🍹🎤"
+          buttonText="¡Entendido!"
+        ></FirstVisitModal>
+        {toast && (
+          <div className="fixed bottom-4 right-4 rounded-md bg-emerald-600 text-white px-4 py-2 shadow-lg text-sm transition-all duration-300 transform translate-y-0 opacity-100">
+            Solicitud enviada
           </div>
         )}
-      </section>
-      <Modal
-        open={open}
-        onClose={() => setOpen(false)}
-        titleId="request-form-title"
-      >
-        <RequestForm onSuccess={handleSuccess} />
-      </Modal>
-      <FirstVisitModal
-        storageKey="welcomeSession"
-        title="🍸 Bienvenido a Infiltragos Music"
-        description="Aquí puedes pedir tus canciones favoritas para nuestras noches de karaoke o cuando el DJ esté en cabina. Solo busca tu canción, envíala y la podrás visualizar a la cola de pedidos. Es fácil, rápido y divertido: ¡tú eliges la música de la noche! 🍹🎤"
-        buttonText="¡Entendido!"
-      ></FirstVisitModal>
-      {toast && (
-        <div className="fixed bottom-4 right-4 rounded-md bg-emerald-600 text-white px-4 py-2 shadow-lg text-sm">
-          Solicitud enviada
-        </div>
-      )}
+      </div>
     </main>
   );
 }

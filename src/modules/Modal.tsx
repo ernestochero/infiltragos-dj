@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from "react";
 
 interface ModalProps {
   open: boolean;
@@ -9,7 +9,12 @@ interface ModalProps {
   titleId?: string;
 }
 
-export default function Modal({ open, onClose, children, titleId }: ModalProps) {
+export default function Modal({
+  open,
+  onClose,
+  children,
+  titleId,
+}: ModalProps) {
   const boxRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -22,11 +27,13 @@ export default function Modal({ open, onClose, children, titleId }: ModalProps) 
     firstFocusable?.focus();
 
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         e.preventDefault();
         onClose();
-      } else if (e.key === 'Tab' && box) {
-        const focusables = Array.from(box.querySelectorAll<HTMLElement>(focusSelectors));
+      } else if (e.key === "Tab" && box) {
+        const focusables = Array.from(
+          box.querySelectorAll<HTMLElement>(focusSelectors)
+        );
         if (focusables.length === 0) return;
         const first = focusables[0];
         const last = focusables[focusables.length - 1];
@@ -40,11 +47,11 @@ export default function Modal({ open, onClose, children, titleId }: ModalProps) 
       }
     }
 
-    document.body.style.overflow = 'hidden';
-    document.addEventListener('keydown', handleKeyDown);
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", handleKeyDown);
     return () => {
-      document.body.style.overflow = '';
-      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = "";
+      document.removeEventListener("keydown", handleKeyDown);
       previousActive?.focus();
     };
   }, [open, onClose]);
@@ -95,4 +102,3 @@ export default function Modal({ open, onClose, children, titleId }: ModalProps) 
     </div>
   );
 }
-
