@@ -1,7 +1,7 @@
 "use client";
 import { Dialog } from "@headlessui/react";
 import React, { useEffect, useState, useRef } from "react";
-import { FaMusic, FaChair, FaUser, FaTimes } from "react-icons/fa";
+import { FaMusic, FaChair, FaUser, FaXmark } from "react-icons/fa6";
 import { z } from "zod";
 import SongAutoComplete from "@/modules/dj/components/SongAutoComplete";
 import { TrackSuggestion } from "@dj/types/spotify";
@@ -187,7 +187,7 @@ export default function ModalRequestForm({
             className="absolute top-3 right-3 text-gray-400 hover:text-white rounded-full p-2 focus:outline-none focus:ring-2 focus:ring-accent transition"
             tabIndex={0}
           >
-            <FaTimes className="h-4 w-4" />
+            <FaXmark className="h-4 w-4" />
           </button>
           <p className="mt-1 text-gray-400 text-sm text-center">
             Escribe el nombre de tu canción y te ayudamos con la búsqueda.

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { voteSchema } from '@dj/lib/schemas';
-import { rateLimit } from '@core/api/rate-limit';
+import { rateLimit, getClientIp } from '@core/api/rate-limit';
 import prisma from '@core/prisma';
 import crypto from 'crypto';
 
@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export async function POST(req: NextRequest) {
-  const ip = req.ip ?? '0.0.0.0';
+  const ip = getClientIp(req);
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
   if (!body) return NextResponse.json({ error: 'Bad JSON' }, { status: 400 });
   const parse = voteSchema.safeParse(body);

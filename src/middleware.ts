@@ -10,6 +10,27 @@ export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const session = await getSession(req);
 
+  // Always ensure an anonymous client-id cookie to scope rate limits per device
+  const res = NextResponse.next();
+  const hasCid = req.cookies.get('cid')?.value;
+  if (!hasCid) {
+    const gcrypto = globalThis.crypto as unknown as { randomUUID?: () => string } | undefined;
+    const cid = gcrypto?.randomUUID
+      ? gcrypto.randomUUID()
+      : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+          const r = (Math.random() * 16) | 0;
+          const v = c === 'x' ? r : (r & 0x3) | 0x8;
+          return v.toString(16);
+        });
+    res.cookies.set('cid', cid, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      path: '/',
+      maxAge: 60 * 60 * 24 * 365,
+    });
+  }
+
   // If the authenticated user is a DJ, restrict access strictly to the DJ module
   // and specific APIs used by that module. Everything else is off-limits.
   if (session?.role === 'DJ') {
@@ -41,24 +62,24 @@ export async function middleware(req: NextRequest) {
     isRequestsRoute && pathname === '/api/requests' && ['GET', 'POST'].includes(req.method);
 
   if (isPublicRequest) {
-    return NextResponse.next();
+    return res;
   }
 
   if (isDJAdminRoute || isRequestsRoute) {
     if (!session || (session.role !== 'DJ' && session.role !== 'ADMIN')) {
       return unauthorized(req, isRequestsRoute);
     }
-    return NextResponse.next();
+    return res;
   }
 
   if (isSurveyAdminRoute || isSurveyApiRoute || isAdminRoute) {
     if (!session || session.role !== 'ADMIN') {
       return unauthorized(req, isSurveyApiRoute);
     }
-    return NextResponse.next();
+    return res;
   }
 
-  return NextResponse.next();
+  return res;
 }
 
 export const config = {

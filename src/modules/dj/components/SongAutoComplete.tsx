@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { TrackSuggestion } from "@dj/types/spotify";
-import { FaMusic } from "react-icons/fa";
+import { FaMusic } from "react-icons/fa6";
 
 interface Props {
   value: string;

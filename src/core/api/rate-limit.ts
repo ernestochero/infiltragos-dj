@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { getSession } from './auth';
+import { getClientId } from './client-id';
 
 interface Record {
   count: number;
@@ -45,7 +46,24 @@ export function rateLimitByRequest(
 ): RateLimitResult {
   const session = getSession(req);
   const user = session?.sub;
-  const ip = req.ip ?? '0.0.0.0';
-  const scope = user ? `u:${user}` : `ip:${ip}`;
+  const cid = getClientId(req);
+  const ip = getClientIp(req);
+  const scope = user ? `u:${user}` : cid ? `cid:${cid}` : `ip:${ip}`;
   return rateLimit(`${prefix}:${scope}`, limit, windowMs);
+}
+
+/**
+ * Best-effort client IP extraction supporting common proxy headers.
+ */
+export function getClientIp(req: NextRequest): string {
+  const xff = req.headers.get('x-forwarded-for');
+  if (xff) {
+    const first = xff.split(',')[0]?.trim();
+    if (first) return first;
+  }
+  const xReal = req.headers.get('x-real-ip');
+  if (xReal) return xReal;
+  const cf = req.headers.get('cf-connecting-ip');
+  if (cf) return cf;
+  return req.ip ?? '0.0.0.0';
 }

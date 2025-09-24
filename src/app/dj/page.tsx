@@ -3,7 +3,7 @@ import useSWR from "swr";
 import { useState, useMemo } from "react";
 import dynamic from "next/dynamic";
 import FirstVisitModal from "../../modules/dj/components/FirstVisitModal";
-import { FaPlayCircle, FaThumbsUp, FaMusic } from "react-icons/fa";
+import { FaCirclePlay, FaThumbsUp, FaMusic } from "react-icons/fa6";
 
 const ModalRequestForm = dynamic(
   () => import("@/modules/dj/components/ModalRequestForm"),
@@ -88,7 +88,7 @@ export default function QueuePage() {
             <div className="rounded-xl bg-card-bg p-6 flex items-center gap-6 relative overflow-hidden group">
               <div className="absolute inset-0 bg-gradient-to-br from-accent/10 via-transparent to-transparent opacity-50 z-0"></div>
               <div className="w-20 h-20 bg-gray-700 rounded-lg flex items-center justify-center flex-shrink-0 z-10">
-                <FaPlayCircle className="text-5xl text-accent opacity-80 animate-pulse" />
+                <FaCirclePlay className="text-5xl text-accent opacity-80 animate-pulse" />
               </div>
               <div className="flex-grow z-10">
                 <span className="inline-flex items-center gap-2 text-accent text-sm font-semibold uppercase">
