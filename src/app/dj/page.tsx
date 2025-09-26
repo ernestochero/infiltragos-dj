@@ -54,6 +54,7 @@ export default function QueuePage() {
   const [lyricsError, setLyricsError] = useState<string | null>(null);
   const LYRICS_FALLBACK_MSG =
     "No se pudo obtener la letra, pero te brindamos dos opciones extras donde puedes encontrarlas:";
+  const LYRICS_TIMEOUT_MS = 5000;
 
   function applyLyricsPayload(payload: unknown) {
     const data = payload as { lyrics?: string | null };
@@ -113,6 +114,7 @@ export default function QueuePage() {
     setLyrics(null);
     setLyricsError(null);
     setLyricsLoading(true);
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
     try {
       // Try client cache first
       const cached = readCachedLyrics(artist, songTitle);
@@ -121,8 +123,11 @@ export default function QueuePage() {
         return;
       }
 
+      const controller = new AbortController();
+      timeoutId = setTimeout(() => controller.abort(), LYRICS_TIMEOUT_MS);
       const res = await fetch(
-        `/api/lyrics?artist=${encodeURIComponent(artist)}&title=${encodeURIComponent(songTitle)}`
+        `/api/lyrics?artist=${encodeURIComponent(artist)}&title=${encodeURIComponent(songTitle)}`,
+        { signal: controller.signal }
       );
 
       const contentType = res.headers.get("content-type") || "";
@@ -161,8 +166,11 @@ export default function QueuePage() {
         if (json?.lyrics) writeCachedLyrics(artist, songTitle, json.lyrics);
       }
     } catch {
+      // Abort o error de red/servidor
       setLyricsError(LYRICS_FALLBACK_MSG);
     } finally {
+      // clear timeout if set
+      try { if (timeoutId) clearTimeout(timeoutId); } catch {}
       setLyricsLoading(false);
     }
   }

@@ -25,7 +25,11 @@ export async function GET(req: NextRequest) {
 
   try {
     const url = `https://api.lyrics.ovh/v1/${encodeURIComponent(artist)}/${encodeURIComponent(title)}`;
-    const upstream = await fetch(url, { headers: { Accept: 'application/json' } });
+    const ac = new AbortController();
+    const timeout = setTimeout(() => ac.abort(), 8000);
+    const upstream = await fetch(url, { headers: { Accept: 'application/json' }, signal: ac.signal }).finally(
+      () => clearTimeout(timeout),
+    );
     const data = await upstream.json().catch(() => ({ error: 'bad-json' }));
     const status = upstream.ok ? 200 : 502;
     const res = NextResponse.json(data, { status });
@@ -40,7 +44,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Lyrics error' }, { status: 502 });
   } finally {
     const ms = Date.now() - started;
-    // Keep a simple trace for visibility in server logs
     console.info(`GET /api/lyrics ${artist} - ${title} in ${ms}ms`);
   }
 }
