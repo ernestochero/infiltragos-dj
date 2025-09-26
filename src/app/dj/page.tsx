@@ -55,16 +55,74 @@ export default function QueuePage() {
   const LYRICS_FALLBACK_MSG =
     "No se pudo obtener la letra, pero te brindamos dos opciones extras donde puedes encontrarlas:";
 
+  function applyLyricsPayload(payload: unknown) {
+    const data = payload as { lyrics?: string | null };
+    if (!data || !data.lyrics) {
+      setLyricsError(LYRICS_FALLBACK_MSG);
+      return;
+    }
+    setLyrics(data.lyrics);
+  }
+
+  const LYRICS_CACHE_KEY = "lyrics:current";
+
+  function normalize(s: string) {
+    return s.trim().toLowerCase();
+  }
+
+  function cleanupLegacyLyricsKeys() {
+    try {
+      const toRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!k) continue;
+        if (k.startsWith("lyrics:") && k !== LYRICS_CACHE_KEY) toRemove.push(k);
+      }
+      for (const k of toRemove) localStorage.removeItem(k);
+    } catch {
+      // ignore
+    }
+  }
+
+  function readCachedLyrics(artist: string, title: string): string | null {
+    try {
+      const raw = localStorage.getItem(LYRICS_CACHE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as { artist: string; title: string; lyrics: string; ts?: number };
+      if (normalize(parsed.artist) === normalize(artist) && normalize(parsed.title) === normalize(title)) {
+        return parsed.lyrics || null;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  function writeCachedLyrics(artist: string, title: string, lyrics: string) {
+    try {
+      cleanupLegacyLyricsKeys();
+      const payload = JSON.stringify({ artist, title, lyrics, ts: Date.now() });
+      localStorage.setItem(LYRICS_CACHE_KEY, payload);
+    } catch {
+      // ignore quota/JSON errors
+    }
+  }
+
   async function handleShowLyrics(songTitle: string, artist: string) {
     setLyricsOpen(true);
     setLyrics(null);
     setLyricsError(null);
     setLyricsLoading(true);
     try {
+      // Try client cache first
+      const cached = readCachedLyrics(artist, songTitle);
+      if (cached) {
+        setLyrics(cached);
+        return;
+      }
+
       const res = await fetch(
-        `https://api.lyrics.ovh/v1/${encodeURIComponent(
-          artist
-        )}/${encodeURIComponent(songTitle)}`
+        `/api/lyrics?artist=${encodeURIComponent(artist)}&title=${encodeURIComponent(songTitle)}`
       );
 
       const contentType = res.headers.get("content-type") || "";
@@ -94,19 +152,13 @@ export default function QueuePage() {
           position += chunk.length;
         }
         const text = new TextDecoder("utf-8").decode(full);
-        const data = JSON.parse(text);
-        if (!data.lyrics) {
-          setLyricsError(LYRICS_FALLBACK_MSG);
-        } else {
-          setLyrics(data.lyrics);
-        }
+        const json = JSON.parse(text);
+        applyLyricsPayload(json);
+        if (json?.lyrics) writeCachedLyrics(artist, songTitle, json.lyrics);
       } else {
-        const data = await res.json();
-        if (!data.lyrics) {
-          setLyricsError(LYRICS_FALLBACK_MSG);
-        } else {
-          setLyrics(data.lyrics);
-        }
+        const json = await res.json();
+        applyLyricsPayload(json);
+        if (json?.lyrics) writeCachedLyrics(artist, songTitle, json.lyrics);
       }
     } catch {
       setLyricsError(LYRICS_FALLBACK_MSG);

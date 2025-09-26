@@ -43,7 +43,8 @@ export async function middleware(req: NextRequest) {
       pathname.startsWith('/now-playing') ||
       pathname.startsWith('/qr') ||
       pathname.startsWith('/api/requests') ||
-      pathname.startsWith('/api/spotify');
+      pathname.startsWith('/api/spotify') ||
+      pathname.startsWith('/api/lyrics');
 
     if (!allowedForDJ) {
       // For API calls respond with 401, for pages redirect to DJ dashboard

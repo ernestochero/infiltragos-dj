@@ -139,14 +139,15 @@ export default function ModalRequestForm({
           box.querySelectorAll<HTMLElement>(focusSelectors)
         );
         if (focusables.length === 0) return;
-        const first = focusables[0];
-        const last = focusables[focusables.length - 1];
-        if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        } else if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
+        const active = document.activeElement as HTMLElement | null;
+        const idx = active ? focusables.indexOf(active) : -1;
+        e.preventDefault();
+        if (e.shiftKey) {
+          const prev = idx <= 0 ? focusables[focusables.length - 1] : focusables[idx - 1];
+          prev?.focus();
+        } else {
+          const next = idx < 0 || idx >= focusables.length - 1 ? focusables[0] : focusables[idx + 1];
+          next?.focus();
         }
       }
     }
@@ -170,7 +171,13 @@ export default function ModalRequestForm({
       aria-labelledby={titleId}
       className="relative z-50"
     >
-      <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4">
+      <div
+        className="fixed inset-0 bg-black/70 flex items-center justify-center p-4"
+        aria-labelledby={titleId}
+        onClick={(e) => {
+          if (e.target === e.currentTarget) onClose();
+        }}
+      >
         <div
           ref={boxRef}
           className="bg-card-bg p-8 m-3 rounded-2xl shadow-2xl max-w-sm w-full relative"
