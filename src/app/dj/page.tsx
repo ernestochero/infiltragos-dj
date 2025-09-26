@@ -2,8 +2,15 @@
 import useSWR from "swr";
 import { useState, useMemo } from "react";
 import dynamic from "next/dynamic";
-import FirstVisitModal from "../../modules/dj/components/FirstVisitModal";
-import { FaCirclePlay, FaThumbsUp, FaMusic } from "react-icons/fa6";
+import FirstVisitModal from "@/modules/dj/components/FirstVisitModal";
+import LyricsModal from "@/modules/dj/components/LyricsModal";
+import {
+  FaCirclePlay,
+  FaMicrophoneLines,
+  FaThumbsUp,
+  FaMusic,
+  FaBookOpen,
+} from "react-icons/fa6";
 
 const ModalRequestForm = dynamic(
   () => import("@/modules/dj/components/ModalRequestForm"),
@@ -25,6 +32,7 @@ interface Request {
   status: RequestStatus;
   tableOrName?: string;
   createdAt?: string;
+  isKaraoke: boolean;
 }
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -40,6 +48,132 @@ export default function QueuePage() {
 
   const [open, setOpen] = useState(false);
   const [toast, setToast] = useState(false);
+  const [lyricsOpen, setLyricsOpen] = useState(false);
+  const [lyrics, setLyrics] = useState<string | null>(null);
+  const [lyricsLoading, setLyricsLoading] = useState(false);
+  const [lyricsError, setLyricsError] = useState<string | null>(null);
+  const LYRICS_FALLBACK_MSG =
+    "No se pudo obtener la letra, pero te brindamos dos opciones extras donde puedes encontrarlas:";
+  const LYRICS_TIMEOUT_MS = 5000;
+
+  function applyLyricsPayload(payload: unknown) {
+    const data = payload as { lyrics?: string | null };
+    if (!data || !data.lyrics) {
+      setLyricsError(LYRICS_FALLBACK_MSG);
+      return;
+    }
+    setLyrics(data.lyrics);
+  }
+
+  const LYRICS_CACHE_KEY = "lyrics:current";
+
+  function normalize(s: string) {
+    return s.trim().toLowerCase();
+  }
+
+  function cleanupLegacyLyricsKeys() {
+    try {
+      const toRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!k) continue;
+        if (k.startsWith("lyrics:") && k !== LYRICS_CACHE_KEY) toRemove.push(k);
+      }
+      for (const k of toRemove) localStorage.removeItem(k);
+    } catch {
+      // ignore
+    }
+  }
+
+  function readCachedLyrics(artist: string, title: string): string | null {
+    try {
+      const raw = localStorage.getItem(LYRICS_CACHE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as { artist: string; title: string; lyrics: string; ts?: number };
+      if (normalize(parsed.artist) === normalize(artist) && normalize(parsed.title) === normalize(title)) {
+        return parsed.lyrics || null;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  function writeCachedLyrics(artist: string, title: string, lyrics: string) {
+    try {
+      cleanupLegacyLyricsKeys();
+      const payload = JSON.stringify({ artist, title, lyrics, ts: Date.now() });
+      localStorage.setItem(LYRICS_CACHE_KEY, payload);
+    } catch {
+      // ignore quota/JSON errors
+    }
+  }
+
+  async function handleShowLyrics(songTitle: string, artist: string) {
+    setLyricsOpen(true);
+    setLyrics(null);
+    setLyricsError(null);
+    setLyricsLoading(true);
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    try {
+      // Try client cache first
+      const cached = readCachedLyrics(artist, songTitle);
+      if (cached) {
+        setLyrics(cached);
+        return;
+      }
+
+      const controller = new AbortController();
+      timeoutId = setTimeout(() => controller.abort(), LYRICS_TIMEOUT_MS);
+      const res = await fetch(
+        `/api/lyrics?artist=${encodeURIComponent(artist)}&title=${encodeURIComponent(songTitle)}`,
+        { signal: controller.signal }
+      );
+
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        throw new Error("Respuesta inesperada del servidor de letras.");
+      }
+
+      const reader = res.body?.getReader();
+      let receivedLength = 0;
+      const chunks: Uint8Array[] = [];
+      const MAX_SIZE = 10 * 1024; // 10 KB
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          receivedLength += value.length;
+          if (receivedLength > MAX_SIZE) {
+            throw new Error("La letra es demasiado grande.");
+          }
+          chunks.push(value);
+        }
+        const full = new Uint8Array(receivedLength);
+        let position = 0;
+        for (const chunk of chunks) {
+          full.set(chunk, position);
+          position += chunk.length;
+        }
+        const text = new TextDecoder("utf-8").decode(full);
+        const json = JSON.parse(text);
+        applyLyricsPayload(json);
+        if (json?.lyrics) writeCachedLyrics(artist, songTitle, json.lyrics);
+      } else {
+        const json = await res.json();
+        applyLyricsPayload(json);
+        if (json?.lyrics) writeCachedLyrics(artist, songTitle, json.lyrics);
+      }
+    } catch {
+      // Abort o error de red/servidor
+      setLyricsError(LYRICS_FALLBACK_MSG);
+    } finally {
+      // clear timeout if set
+      try { if (timeoutId) clearTimeout(timeoutId); } catch {}
+      setLyricsLoading(false);
+    }
+  }
 
   function handleSuccess() {
     setOpen(false);
@@ -88,7 +222,11 @@ export default function QueuePage() {
             <div className="rounded-xl bg-card-bg p-6 flex items-center gap-6 relative overflow-hidden group">
               <div className="absolute inset-0 bg-gradient-to-br from-accent/10 via-transparent to-transparent opacity-50 z-0"></div>
               <div className="w-20 h-20 bg-gray-700 rounded-lg flex items-center justify-center flex-shrink-0 z-10">
-                <FaCirclePlay className="text-5xl text-accent opacity-80 animate-pulse" />
+                {nowPlaying.isKaraoke ? (
+                  <FaMicrophoneLines className="text-5xl text-accent opacity-80 animate-pulse" />
+                ) : (
+                  <FaCirclePlay className="text-5xl text-accent opacity-80 animate-pulse" />
+                )}
               </div>
               <div className="flex-grow z-10">
                 <span className="inline-flex items-center gap-2 text-accent text-sm font-semibold uppercase">
@@ -96,20 +234,34 @@ export default function QueuePage() {
                   Reproduciendo
                 </span>
                 <p className="mt-1 text-2xl font-bold text-white">
-                  {nowPlaying.songTitle}{" "}
-                  <span className="font-medium text-gray-400">
-                    - {nowPlaying.artist}
-                  </span>
+                  {nowPlaying.songTitle}
                 </p>
-                {nowPlaying.tableOrName && (
-                  <p className="text-sm mt-1 text-gray-500">
-                    De: {nowPlaying.tableOrName}
-                  </p>
-                )}
-              </div>
-              <div className="flex items-center gap-1 text-xl font-bold text-gray-400 hover:text-accent transition-colors duration-300 z-10 cursor-pointer">
-                <FaThumbsUp />
-                <span>{nowPlaying.votes}</span>
+                <p className="text-base font-medium text-gray-400">
+                  {nowPlaying.artist}
+                </p>
+                <div className="flex items-center mt-3">
+                  {nowPlaying.isKaraoke && (
+                    <button
+                      className="flex items-center gap-2 text-accent underline underline-offset-2 hover:text-accent-hover transition bg-transparent border-none p-0 shadow-none cursor-pointer relative z-20"
+                      style={{ appearance: "none" }}
+                      onClick={() =>
+                        handleShowLyrics(
+                          nowPlaying.songTitle,
+                          nowPlaying.artist
+                        )
+                      }
+                      aria-label="Ver letra de la canción"
+                    >
+                      <FaBookOpen className="inline-block" />
+                      Ver Letra
+                    </button>
+                  )}
+                  <div className="flex-1" />
+                  <div className="flex items-center gap-1 text-xl font-bold text-gray-400 hover:text-accent transition-colors duration-300 z-10 cursor-pointer">
+                    <FaThumbsUp />
+                    <span>{nowPlaying.votes}</span>
+                  </div>
+                </div>
               </div>
             </div>
           ) : (
@@ -181,6 +333,15 @@ export default function QueuePage() {
           )}
         </section>
 
+        <LyricsModal
+          open={lyricsOpen}
+          onClose={() => setLyricsOpen(false)}
+          songTitle={nowPlaying?.songTitle}
+          artist={nowPlaying?.artist}
+          lyrics={lyrics}
+          lyricsLoading={lyricsLoading}
+          lyricsError={lyricsError}
+        />
         <ModalRequestForm
           open={open}
           onClose={() => setOpen(false)}

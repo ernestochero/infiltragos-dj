@@ -6,6 +6,7 @@ export interface Request {
   votes: number;
   createdAt: number;
   tableOrName?: string;
+  isKaraoke: boolean;
 }
 
 /**
@@ -19,8 +20,8 @@ export function findDuplicate(
 ): Request | undefined {
   const now = Date.now();
   return list.find(
-    r =>
-      r.status === 'PENDING' &&
+    (r) =>
+      r.status === "PENDING" &&
       r.songTitle.toLowerCase() === songTitle.toLowerCase() &&
       r.artist.toLowerCase() === artist.toLowerCase() &&
       now - r.createdAt <= windowMs
