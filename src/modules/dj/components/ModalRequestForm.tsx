@@ -52,6 +52,7 @@ export default function ModalRequestForm({
   const [state, setState] = useState<"idle" | "submitting">("idle");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [globalError, setGlobalError] = useState<string>("");
+  const [isKaraoke, setIsKaraoke] = useState(true);
 
   function onChange<K extends keyof FormDataShape>(key: K, v: string) {
     setValues((prev) => ({ ...prev, [key]: v }));
@@ -81,7 +82,7 @@ export default function ModalRequestForm({
       const res = await fetch("/api/requests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(parsed.data),
+        body: JSON.stringify({ ...parsed.data, isKaraoke }),
       });
       if (!res.ok) {
         let message =
@@ -284,6 +285,37 @@ export default function ModalRequestForm({
                   {errors.table_or_name}
                 </p>
               )}
+            </div>
+
+            <div className="flex justify-center my-2">
+              <div className="relative bg-slate-200 rounded-lg p-0.5 flex w-40">
+                <button
+                  type="button"
+                  className={`w-1/2 py-1 text-xs font-bold transition-colors duration-150 rounded-l-md border border-r-0
+                  ${
+                    isKaraoke
+                      ? "bg-accent text-dark-bg shadow"
+                      : "bg-slate-50 text-slate-900 hover:bg-slate-100"
+                  }`}
+                  onClick={() => setIsKaraoke(true)}
+                  aria-pressed={isKaraoke}
+                >
+                  Karaoke
+                </button>
+                <button
+                  type="button"
+                  className={`w-1/2 py-1 text-xs font-bold transition-colors duration-150 rounded-r-md border border-l-0
+                  ${
+                    !isKaraoke
+                      ? "bg-accent text-dark-bg shadow"
+                      : "bg-slate-50 text-slate-900 hover:bg-slate-100"
+                  }`}
+                  onClick={() => setIsKaraoke(false)}
+                  aria-pressed={!isKaraoke}
+                >
+                  DJ
+                </button>
+              </div>
             </div>
 
             <button

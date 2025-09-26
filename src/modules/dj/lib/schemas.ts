@@ -1,5 +1,5 @@
-import { z } from 'zod';
-import { RequestStatus } from '@prisma/client';
+import { z } from "zod";
+import { RequestStatus } from "@prisma/client";
 
 export const requestSchema = z.object({
   song_title: z.string().min(1).max(100),
@@ -7,6 +7,7 @@ export const requestSchema = z.object({
   table_or_name: z.string().max(100).optional(),
   track_id: z.string().optional(),
   track_uri: z.string().optional(),
+  isKaraoke: z.boolean().default(true),
 });
 
 export const voteSchema = z.object({
