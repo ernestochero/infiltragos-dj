@@ -26,6 +26,12 @@ npm run prisma:migrate
 npm run db:seed
 ```
 
+To reset the database from scratch (drops all data and reapplies migrations):
+
+```
+npx prisma migrate reset --force
+```
+
 ## Testing
 ```
 npm test
@@ -36,6 +42,28 @@ Copy `.env.example` to `.env` and fill in values for database and realtime provi
 
 Set `ADMIN_USER`, `ADMIN_PASSWORD`, `DJ_ADMIN_USER` and `DJ_ADMIN_PASSWORD` to control access.
 Log in at `/login` with those credentials. DJs go to `/dj/admin` while admins land on `/admin`. Use the "Logout" button to clear the session.
+
+### WhatsApp & Wallet templates
+
+Configure these variables to enable the wallet activation template flow:
+
+```
+WHATSAPP_ENABLED=true
+WHATSAPP_API_BASE_URL=https://graph.facebook.com/v19.0
+WHATSAPP_PHONE_NUMBER_ID=YOUR_PHONE_ID
+WHATSAPP_ACCESS_TOKEN=YOUR_TOKEN
+WALLET_WHATSAPP_TEMPLATE_ACTIVATION=wallet_activation_double_cta
+WALLET_WHATSAPP_TEMPLATE_LANG=es
+WALLET_TEMPLATE_BASE_URL=https://tu-dominio.com
+WALLET_PORTAL_URL=https://tu-dominio.com/wallet/portal
+WALLET_PASS_LANDING_URL=https://tu-dominio.com/wallet/add
+WALLET_WHATSAPP_TEMPLATE_OTP=wallet_otp_login
+WALLET_WHATSAPP_TEMPLATE_OTP_LANG=es
+WALLET_OTP_TTL_SECONDS=300
+WALLET_OTP_COOLDOWN_SECONDS=60
+NEXT_PUBLIC_WALLET_OTP_LENGTH=6
+WALLET_WHATSAPP_TEMPLATE_DYNAMIC_BUTTONS=false
+```
 
 ### Manual tests
 - Dragging a card between columns persists the new status.
