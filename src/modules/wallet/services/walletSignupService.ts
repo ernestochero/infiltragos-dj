@@ -33,6 +33,7 @@ export async function saveWalletSignup(payload: unknown): Promise<WalletSignupRe
         where: { phoneNumber: data.phoneNumber },
         data: {
           fullName: data.fullName,
+          dni: data.dni,
           email: data.email,
         },
       });
@@ -40,6 +41,7 @@ export async function saveWalletSignup(payload: unknown): Promise<WalletSignupRe
       record = await tx.walletSignup.create({
         data: {
           fullName: data.fullName,
+          dni: data.dni,
           phoneNumber: data.phoneNumber,
           email: data.email,
         },

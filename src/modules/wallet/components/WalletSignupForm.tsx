@@ -5,6 +5,7 @@ import WalletSignupConfirmation from './WalletSignupConfirmation';
 
 type FormValues = {
   fullName: string;
+  dni: string;
   phoneNumber: string;
   email: string;
 };
@@ -13,6 +14,7 @@ type FieldErrors = Partial<Record<keyof FormValues, string>>;
 
 const INITIAL_VALUES: FormValues = {
   fullName: '',
+  dni: '',
   phoneNumber: '',
   email: '',
 };
@@ -50,6 +52,7 @@ export default function WalletSignupForm() {
 
       const payload = {
         fullName: values.fullName.trim(),
+        dni: values.dni.trim(),
         phoneNumber: `${countryCode}${nationalNumber}`,
         email: values.email.trim(),
       };
@@ -76,7 +79,11 @@ export default function WalletSignupForm() {
           const formatted: FieldErrors = {};
           for (const [field, messages] of Object.entries(data.issues)) {
             const key = field as keyof FormValues;
-            if (messages && messages.length > 0 && (key === 'fullName' || key === 'phoneNumber' || key === 'email')) {
+            if (
+              messages &&
+              messages.length > 0 &&
+              (key === 'fullName' || key === 'dni' || key === 'phoneNumber' || key === 'email')
+            ) {
               formatted[key] = messages[0];
             }
           }
@@ -129,6 +136,34 @@ export default function WalletSignupForm() {
         {fieldErrors.fullName && (
           <p id="fullName-error" className="text-sm text-red-400">
             {fieldErrors.fullName}
+          </p>
+        )}
+      </div>
+
+      <div className="space-y-1.5">
+        <label htmlFor="dni" className="block text-xs font-semibold uppercase tracking-[0.18em] text-gray-300">
+          DNI
+        </label>
+        <input
+          id="dni"
+          type="text"
+          inputMode="numeric"
+          autoComplete="off"
+          value={values.dni}
+          onChange={(event) => {
+            const numeric = event.target.value.replace(/[^\d]/g, '').slice(0, 12);
+            setValues((prev) => ({ ...prev, dni: numeric }));
+          }}
+          aria-invalid={fieldErrors.dni ? 'true' : 'false'}
+          aria-describedby={fieldErrors.dni ? 'dni-error' : undefined}
+          className="w-full rounded-md border border-white/15 bg-black/40 px-4 py-3 text-base text-white placeholder:text-gray-500 focus:border-white focus:outline-none focus:ring-2 focus:ring-white/30"
+          placeholder="Ej. 12345678"
+          required
+        />
+        <p className="text-xs text-gray-500">Usaremos tu DNI para validar tu identidad y beneficios.</p>
+        {fieldErrors.dni && (
+          <p id="dni-error" className="text-sm text-red-400">
+            {fieldErrors.dni}
           </p>
         )}
       </div>

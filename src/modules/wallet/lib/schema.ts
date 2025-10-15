@@ -6,6 +6,10 @@ export const walletSignupSchema = z.object({
     .trim()
     .min(3, 'Ingresa tu nombre completo')
     .max(120, 'El nombre es demasiado largo'),
+  dni: z
+    .string({ required_error: 'El DNI es obligatorio' })
+    .trim()
+    .refine((value) => /^\d{8}$/.test(value), { message: 'Ingresa un DNI válido de 8 dígitos' }),
   phoneNumber: z
     .string({ required_error: 'El número de celular es obligatorio' })
     .trim()

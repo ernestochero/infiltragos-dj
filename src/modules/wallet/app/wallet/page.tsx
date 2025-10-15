@@ -16,9 +16,7 @@ export default function WalletSignupPage() {
             <h2 className="text-xl font-semibold text-white">Datos para tu wallet</h2>
             <p className="text-sm text-gray-400">Completarlo toma menos de un minuto y nos ayuda a personalizar tu experiencia.</p>
             <ul className="list-disc space-y-1 pl-5 text-sm text-gray-500">
-              <li>Recibirás un WhatsApp con dos botones: añadir tu wallet y abrir tu portal.</li>
-              <li>Desde el portal podrás generar códigos OTP cada vez que quieras ingresar.</li>
-              <li>Si no llega en 2 minutos, avisa al staff para reenviarlo.</li>
+              <li>Recibirás un WhatsApp con dos botones: añadir tu wallet y ver tu perfil.</li>
             </ul>
           </div>
           <WalletSignupForm />

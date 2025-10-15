@@ -204,6 +204,7 @@ model RaffleWinner {
 model WalletSignup {
   id          String   @id @default(cuid())
   fullName    String
+  dni         String   @db.VarChar(16)
   phoneNumber String   @db.VarChar(32)
   email       String
   createdAt   DateTime @default(now())
@@ -213,6 +214,7 @@ model WalletSignup {
 
   @@index([phoneNumber])
   @@index([email])
+  @@index([dni])
   @@unique([phoneNumber])
 }
 

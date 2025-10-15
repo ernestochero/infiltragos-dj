@@ -10,6 +10,7 @@ CREATE TYPE "WalletOtpChannel" AS ENUM ('WHATSAPP', 'EMAIL');
 CREATE TABLE "WalletSignup" (
   "id" TEXT PRIMARY KEY,
   "fullName" TEXT NOT NULL,
+  "dni" VARCHAR(16) NOT NULL,
   "phoneNumber" VARCHAR(32) NOT NULL,
   "email" TEXT NOT NULL,
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -18,6 +19,7 @@ CREATE TABLE "WalletSignup" (
 CREATE UNIQUE INDEX "WalletSignup_phoneNumber_key" ON "WalletSignup" ("phoneNumber");
 CREATE INDEX "WalletSignup_phoneNumber_idx" ON "WalletSignup" ("phoneNumber");
 CREATE INDEX "WalletSignup_email_idx" ON "WalletSignup" ("email");
+CREATE INDEX "WalletSignup_dni_idx" ON "WalletSignup" ("dni");
 
 -- CreateTable WalletProfile
 CREATE TABLE "WalletProfile" (
