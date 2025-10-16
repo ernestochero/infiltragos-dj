@@ -29,6 +29,7 @@ type WalletOtpRequestResult =
   | { ok: true; expiresIn: number; cooldown: number }
   | { ok: false; error: 'PROFILE_NOT_FOUND' }
   | { ok: false; error: 'COOLDOWN'; retryAfter: number }
+  | { ok: false; error: 'SEND_FAILED'; reason?: string }
   | { ok: false; error: string; retryAfter?: number };
 
 type WalletOtpVerifyResult =
@@ -77,7 +78,14 @@ export async function requestWalletOtp(rawPhoneNumber: string) {
     },
   });
 
-  await sendWalletOtpTemplate(profile, { code });
+  const sendResult = await sendWalletOtpTemplate(profile, { code });
+  if (sendResult.status !== 'sent') {
+    return {
+      ok: false,
+      error: 'SEND_FAILED',
+      reason: 'reason' in sendResult ? sendResult.reason : sendResult.status,
+    } as WalletOtpRequestResult;
+  }
 
   return {
     ok: true,

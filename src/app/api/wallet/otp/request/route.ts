@@ -22,6 +22,10 @@ export async function POST(req: NextRequest) {
           { status: 429, headers: { 'Retry-After': String(retryAfter) } }
         );
       }
+      case 'SEND_FAILED': {
+        const reason = 'reason' in result ? result.reason : undefined;
+        return NextResponse.json({ error: 'SEND_FAILED', reason }, { status: 503 });
+      }
       default:
         return NextResponse.json({ error: result.error }, { status: 400 });
     }

@@ -225,7 +225,10 @@ Este set cubre el flujo end-to-end con OTP por WhatsApp manteniendo baja fricci�
 | `WALLET_OTP_TTL_SECONDS` | Tiempo de expiración del código OTP en segundos (default 300). |
 | `WALLET_OTP_COOLDOWN_SECONDS` | Tiempo mínimo entre solicitudes OTP para el mismo número (default 60). |
 | `NEXT_PUBLIC_WALLET_OTP_LENGTH` | Cantidad de dígitos del código OTP mostrada en el portal (default 6). |
-| `WALLET_WHATSAPP_TEMPLATE_DYNAMIC_BUTTONS` | Si vale `true`, se envían URLs dinámicas para los botones del template. |
+| `NEXT_PUBLIC_WALLET_APPLE_PASS_URL` | URL pública del archivo `.pkpass` o flujo de Apple Wallet. |
+| `NEXT_PUBLIC_WALLET_GOOGLE_PASS_URL` | URL pública del enlace `Save to Google Wallet`. |
+| `NEXT_PUBLIC_WALLET_PORTAL_URL` | URL pública del portal para solicitar OTP/perfil. |
+| `WALLET_WHATSAPP_DISABLED` | Si es `true`, omite el envío de plantillas a WhatsApp (útil en local). |
 
 El template de WhatsApp debe definir dos botones `URL` en los índices `0` y `1` para que el back-end pueda inyectar dinámicamente los enlaces de wallet y portal.
 

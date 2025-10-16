@@ -13,30 +13,13 @@ export async function POST(req: NextRequest) {
   }
   try {
     const result = await saveWalletSignup(body);
-    const baseUrl =
-      process.env.WALLET_TEMPLATE_BASE_URL ||
-      process.env.NEXT_PUBLIC_APP_URL ||
-      process.env.APP_URL ||
-      '';
-    const withBase = baseUrl.replace(/\/+$/, '');
-    const portalUrl = process.env.WALLET_PORTAL_URL || (withBase ? `${withBase}/wallet/portal` : '');
-    const walletLandingUrl =
-      process.env.WALLET_PASS_LANDING_URL || (withBase ? `${withBase}/wallet/add` : '');
-
     let messageStatus: { status: string; reason?: string } | undefined;
     try {
-      if (portalUrl && walletLandingUrl) {
-        const sendResult = await sendWalletActivationTemplate(result.record, result.profile, {
-          portalUrl,
-          walletLandingUrl,
-        });
-        messageStatus =
-          sendResult.status === 'skipped'
-            ? { status: 'skipped', reason: sendResult.reason }
-            : { status: sendResult.status };
-      } else {
-        messageStatus = { status: 'skipped', reason: 'Missing portal or wallet landing URL' };
-      }
+      const sendResult = await sendWalletActivationTemplate(result.record, result.profile);
+      messageStatus =
+        sendResult.status === 'skipped'
+          ? { status: 'skipped', reason: sendResult.reason }
+          : { status: sendResult.status };
     } catch (err) {
       console.error('Wallet activation template error', err);
       messageStatus = { status: 'failed', reason: 'unexpected_error' };

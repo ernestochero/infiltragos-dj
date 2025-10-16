@@ -15,9 +15,6 @@ export default function WalletSignupPage() {
           <div className="space-y-2">
             <h2 className="text-xl font-semibold text-white">Datos para tu wallet</h2>
             <p className="text-sm text-gray-400">Completarlo toma menos de un minuto y nos ayuda a personalizar tu experiencia.</p>
-            <ul className="list-disc space-y-1 pl-5 text-sm text-gray-500">
-              <li>Recibirás un WhatsApp con dos botones: añadir tu wallet y ver tu perfil.</li>
-            </ul>
           </div>
           <WalletSignupForm />
         </section>

@@ -74,6 +74,8 @@ export default function WalletOtpPortal() {
           const retryAfter = data?.retryAfter ?? 60;
           setCooldownLeft(retryAfter);
           setError('Espera unos segundos antes de solicitar otro código.');
+        } else if (data?.error === 'SEND_FAILED') {
+          setError(`Nota: El envío automático quedó pendiente. Detalle: ${data?.reason || 'Intenta más tarde.'}`);
         } else {
           setError(data?.error || 'No pudimos enviar el código. Inténtalo nuevamente.');
         }
@@ -143,10 +145,7 @@ export default function WalletOtpPortal() {
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col gap-6 rounded-2xl border border-white/10 bg-zinc-950/80 p-8 shadow-lg backdrop-blur">
       <header className="space-y-2 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight text-white">Portal de Wallet</h1>
-        <p className="text-sm text-gray-400">
-          Ingresa tu número para recibir un código OTP por WhatsApp y acceder a tu perfil.
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight text-white">Accede con tu celular</h1>
       </header>
 
       <div className="space-y-1.5">
@@ -180,7 +179,7 @@ export default function WalletOtpPortal() {
 
       <form onSubmit={handleVerifyOtp} className="space-y-3">
         <label htmlFor="otp" className="block text-xs font-semibold uppercase tracking-[0.2em] text-gray-300">
-          Código OTP
+          Código de acceso
         </label>
         <input
           id="otp"

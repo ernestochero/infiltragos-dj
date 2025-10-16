@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import WalletSignupConfirmation from './WalletSignupConfirmation';
+import WalletAddModal from './WalletAddModal';
 
 type FormValues = {
   fullName: string;
@@ -28,6 +29,7 @@ export default function WalletSignupForm() {
   const [generalError, setGeneralError] = useState<string | null>(null);
   const [successState, setSuccessState] = useState<'created' | 'updated' | null>(null);
   const [messageStatus, setMessageStatus] = useState<{ status: string; reason?: string } | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
 
   function handleChange<T extends keyof FormValues>(field: T) {
     return (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -70,6 +72,7 @@ export default function WalletSignupForm() {
         setFieldErrors({});
         setGeneralError(null);
         setMessageStatus(result.messageStatus ?? null);
+        setShowAddModal(false);
         return;
       }
 
@@ -109,10 +112,21 @@ export default function WalletSignupForm() {
     setFieldErrors({});
     setGeneralError(null);
     setMessageStatus(null);
+    setShowAddModal(false);
   };
 
   if (successState) {
-    return <WalletSignupConfirmation variant={successState} messageStatus={messageStatus} onRestart={handleRestart} />;
+    return (
+      <>
+        <WalletAddModal open={showAddModal} onClose={() => setShowAddModal(false)} />
+        <WalletSignupConfirmation
+          variant={successState}
+          messageStatus={messageStatus}
+          onRestart={handleRestart}
+          onOpenWalletModal={() => setShowAddModal(true)}
+        />
+      </>
+    );
   }
 
   return (
