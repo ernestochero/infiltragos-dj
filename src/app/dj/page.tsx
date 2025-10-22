@@ -183,7 +183,7 @@ export default function QueuePage() {
   }
 
   const { nowPlaying, pending } = useMemo(() => {
-    const list = data ?? [];
+    const list = Array.isArray(data) ? data : [];
     const playing = list.find((r) => r.status === "PLAYING");
     const pendingSorted = list
       .filter((r) => r.status === "PENDING")
