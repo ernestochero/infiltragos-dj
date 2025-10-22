@@ -228,14 +228,10 @@ export default function QueuePage() {
                   <FaCirclePlay className="text-5xl text-accent opacity-80 animate-pulse" />
                 )}
               </div>
-              <div className="flex-grow z-10">
-                <span className="inline-flex items-center gap-2 text-accent text-sm font-semibold uppercase">
-                  <span className="inline-block h-2 w-2 rounded-full bg-accent animate-pulse" />
-                  Reproduciendo
-                </span>
-                <p className="mt-1 text-2xl font-bold text-white">
+              <div className="flex-1 min-w-0 z-10">
+                <h3 className="text-2xl font-bold text-white truncate">
                   {nowPlaying.songTitle}
-                </p>
+                </h3>
                 <p className="text-base font-medium text-gray-400">
                   {nowPlaying.artist}
                 </p>
