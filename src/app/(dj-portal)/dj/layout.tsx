@@ -12,6 +12,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Inicio', href: '/dj' },
+  { label: 'Top semanal', href: '/dj/top-semanal' },
 ];
 
 const LOGO_URL =
@@ -49,8 +50,10 @@ export default function DjLayout({
           </div>
           <nav className="flex-1 space-y-1 px-3 py-4">
             {NAV_ITEMS.map((item) => {
-              const active =
-                pathname === item.href || pathname.startsWith(`${item.href}/`);
+              const isRoot = item.href === '/dj';
+              const active = isRoot
+                ? pathname === item.href
+                : pathname === item.href || pathname.startsWith(`${item.href}/`);
               return (
                 <Link
                   key={item.href}

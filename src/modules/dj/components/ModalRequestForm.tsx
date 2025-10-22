@@ -36,6 +36,8 @@ interface ModalProps {
   titleId?: string;
   title?: string;
   onSuccess: () => void;
+  prefillSongTitle?: string;
+  prefillArtist?: string;
 }
 export default function ModalRequestForm({
   open,
@@ -43,6 +45,8 @@ export default function ModalRequestForm({
   titleId = "request-form-title",
   title = "Nuevo pedido",
   onSuccess,
+  prefillSongTitle,
+  prefillArtist,
 }: ModalProps) {
   const [values, setValues] = useState<FormDataShape>({
     song_title: "",
@@ -53,6 +57,21 @@ export default function ModalRequestForm({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [globalError, setGlobalError] = useState<string>("");
   const [isKaraoke, setIsKaraoke] = useState(true);
+
+  useEffect(() => {
+    if (!open) return;
+    setValues({
+      song_title: prefillSongTitle ?? "",
+      artist: prefillArtist ?? "",
+      table_or_name: "",
+      track_id: undefined,
+      track_uri: undefined,
+    });
+    setErrors({});
+    setGlobalError("");
+    setIsKaraoke(true);
+    setState("idle");
+  }, [open, prefillSongTitle, prefillArtist]);
 
   function onChange<K extends keyof FormDataShape>(key: K, v: string) {
     setValues((prev) => ({ ...prev, [key]: v }));
@@ -102,7 +121,13 @@ export default function ModalRequestForm({
         setState("idle");
         return;
       }
-      setValues({ song_title: "", artist: "", table_or_name: "" });
+      setValues({
+        song_title: "",
+        artist: "",
+        table_or_name: "",
+        track_id: undefined,
+        track_uri: undefined,
+      });
       onSuccess();
       setState("idle");
     } catch {
