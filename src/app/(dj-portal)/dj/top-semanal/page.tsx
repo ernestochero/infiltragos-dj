@@ -10,33 +10,18 @@ import {
   FaCirclePlay,
 } from "react-icons/fa6";
 import ModalRequestForm from "@/modules/dj/components/ModalRequestForm";
-
-type RequestStatus = "PENDING" | "PLAYING" | "DONE" | "REJECTED";
-
-interface Request {
-  id: string;
-  songTitle: string;
-  artist: string;
-  votes: number;
-  status: RequestStatus;
-  tableOrName?: string;
-  createdAt?: string;
-  isKaraoke: boolean;
-}
-
-interface TopEntry {
-  songTitle: string;
-  artist: string;
-  total: number;
-  karaoke: number;
-  dj: number;
-}
+import type { TopEntry } from "@/modules/dj/lib/top";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
+interface WeeklyTopResponse {
+  data: TopEntry[];
+  updatedAt: number;
+}
+
 export default function WeeklyTopPage() {
-  const { data, isLoading, mutate } = useSWR<Request[]>(
-    "/api/requests",
+  const { data, isLoading, mutate, error } = useSWR<WeeklyTopResponse>(
+    "/api/top/weekly",
     fetcher,
     {
       refreshInterval: 60_000,
@@ -49,41 +34,29 @@ export default function WeeklyTopPage() {
   );
   const [toast, setToast] = useState(false);
 
-  const weeklyTopFull = useMemo<TopEntry[]>(() => {
-    const list = Array.isArray(data) ? data : [];
-    if (list.length === 0) return [];
-    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
-    const map = new Map<string, TopEntry>();
-
-    for (const req of list) {
-      const createdAtValue = req.createdAt
-        ? new Date(req.createdAt).getTime()
-        : NaN;
-      if (!Number.isFinite(createdAtValue) || createdAtValue < cutoff) continue;
-      const key = `${req.songTitle.toLowerCase()}::${req.artist.toLowerCase()}`;
-      if (!map.has(key)) {
-        map.set(key, {
-          songTitle: req.songTitle,
-          artist: req.artist,
-          total: 0,
-          karaoke: 0,
-          dj: 0,
-        });
-      }
-      const entry = map.get(key)!;
-      const demand = (req.votes ?? 0) + 1;
-      entry.total += demand;
-      if (req.isKaraoke) {
-        entry.karaoke += demand;
-      } else {
-        entry.dj += demand;
-      }
-    }
-
-    return Array.from(map.values()).sort((a, b) => b.total - a.total);
+  const weeklyTop = useMemo(() => {
+    if (!data?.data) return [];
+    return data.data.slice(0, 10);
   }, [data]);
 
-  const weeklyTop = weeklyTopFull.slice(0, 10);
+  const updatedAtLabel = useMemo(() => {
+    if (!data?.updatedAt) return "Top 10 semanal";
+    try {
+      const date = new Date(data.updatedAt);
+      const formatted = date.toLocaleString(undefined, {
+        hour: "2-digit",
+        minute: "2-digit",
+        day: "numeric",
+        month: "short",
+      });
+      return `Top 10 semanal · actualizado ${formatted}`;
+    } catch {
+      return "Top 10 semanal";
+    }
+  }, [data]);
+
+  const showSkeleton = isLoading && !data;
+  const isEmpty = !showSkeleton && !error && weeklyTop.length === 0;
 
   function openModalForSong(songTitle: string, artist: string) {
     setPrefill({ songTitle, artist });
@@ -107,9 +80,7 @@ export default function WeeklyTopPage() {
           >
             <FaArrowLeft className="h-4 w-4" /> Volver a la cola
           </Link>
-          <div className="text-sm text-gray-400">
-            Última actualización cada minuto · Top 10 semanal
-          </div>
+          <div className="text-sm text-gray-400">{updatedAtLabel}</div>
         </header>
 
         <section className="rounded-xl bg-card-bg p-6 shadow-lg">
@@ -126,7 +97,7 @@ export default function WeeklyTopPage() {
           </div>
 
           <div className="mt-6">
-            {isLoading ? (
+            {showSkeleton ? (
               <div className="space-y-3">
                 {Array.from({ length: 5 }).map((_, idx) => (
                   <div
@@ -135,7 +106,11 @@ export default function WeeklyTopPage() {
                   />
                 ))}
               </div>
-            ) : weeklyTop.length === 0 ? (
+            ) : error ? (
+              <div className="rounded-lg bg-rose-500/10 p-6 text-center text-sm text-rose-200 border border-rose-500/20">
+                No pudimos cargar el top semanal. Intenta más tarde.
+              </div>
+            ) : isEmpty ? (
               <div className="rounded-lg bg-gray-800/60 p-6 text-center text-sm text-gray-400">
                 Aún no hay suficientes datos para el ranking semanal.
               </div>

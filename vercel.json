@@ -1,0 +1,9 @@
+{
+  "crons": [
+    {
+      "path": "/api/admin/top/rebuild",
+      "schedule": "0 10 * * 1",
+      "method": "POST"
+    }
+  ]
+}

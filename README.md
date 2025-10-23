@@ -44,6 +44,12 @@ Log in at `/login` with those credentials. DJs go to `/dj/admin` while admins la
 ## Deployment
 Deploy on Vercel and connect to a PostgreSQL database (e.g. Supabase).
 
+### Weekly top cache & cron
+- Configura las credenciales de Upstash (`UPSTASH_KV_REST_API_URL`, `UPSTASH_KV_REST_API_TOKEN` o al menos el `UPSTASH_KV_REST_API_READ_ONLY_TOKEN`, más `UPSTASH_KV_URL` para conexiones tradicionales) y un secreto para el cron (`CRON_SECRET`).
+- The weekly ranking is exposed via `GET /api/top/weekly`, which serves cached results (7‑day TTL) and recomputes on cache misses.
+- Trigger a rebuild with `POST /api/admin/top/rebuild` and header `Authorization: Bearer $CRON_SECRET`.
+- On Vercel, add a Cron Job that hits the rebuild endpoint every Monday morning (e.g. `0 10 * * 1` UTC). Add another schedule if you later introduce daily rebuilds for historical charts.
+
 ## Module structure
 
 The codebase is organized in a light multi-module layout.
