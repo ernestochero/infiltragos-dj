@@ -30,9 +30,8 @@ export async function GET() {
     const data = await computeWeeklyTop();
     const payload: CachePayload = { data, updatedAt: Date.now() };
 
-    const redisForWrite = getRedis();
-    if (redisForWrite) {
-      await redisForWrite.set(WEEKLY_TOP_CACHE_KEY, payload, {
+    if (redisClient) {
+      await redisClient.set(WEEKLY_TOP_CACHE_KEY, payload, {
         px: WEEKLY_TOP_TTL_MS,
       });
     }
