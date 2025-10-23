@@ -10,16 +10,24 @@ export interface TopEntry {
 
 export const WEEKLY_TOP_CACHE_KEY = "dj:top:weekly:v1";
 export const WEEKLY_TOP_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+export const HISTORICAL_TOP_CACHE_KEY = "dj:top:historical:v1";
+export const HISTORICAL_TOP_TTL_MS = 24 * 60 * 60 * 1000;
 
-export async function computeWeeklyTop(limit = 10): Promise<TopEntry[]> {
-  const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+interface ComputeTopOptions {
+  limit: number;
+  since?: Date;
+}
+
+async function computeTop({ limit, since }: ComputeTopOptions): Promise<TopEntry[]> {
   const rows = await prisma.request.groupBy({
     by: ["songTitle", "artist", "isKaraoke"],
-    where: {
-      createdAt: {
-        gte: cutoff,
-      },
-    },
+    where: since
+      ? {
+          createdAt: {
+            gte: since,
+          },
+        }
+      : undefined,
     _sum: {
       votes: true,
     },
@@ -54,4 +62,13 @@ export async function computeWeeklyTop(limit = 10): Promise<TopEntry[]> {
   return Array.from(map.values())
     .sort((a, b) => b.total - a.total)
     .slice(0, limit);
+}
+
+export function computeWeeklyTop(limit = 10): Promise<TopEntry[]> {
+  const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  return computeTop({ limit, since: cutoff });
+}
+
+export function computeHistoricalTop(limit = 30): Promise<TopEntry[]> {
+  return computeTop({ limit });
 }

@@ -13,6 +13,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { label: 'Inicio', href: '/dj' },
   { label: 'Top semanal', href: '/dj/top-semanal' },
+  { label: 'Top histórico', href: '/dj/top-historico' },
 ];
 
 const LOGO_URL =
