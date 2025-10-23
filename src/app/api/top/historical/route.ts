@@ -11,6 +11,12 @@ interface CachePayload {
   updatedAt: number;
 }
 
+function buildPlaylistUrl(): string | null {
+  const id = process.env.TOP_HISTORICAL_PLAYLIST_ID;
+  if (!id) return null;
+  return `https://open.spotify.com/playlist/${id}`;
+}
+
 export const runtime = "nodejs";
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -23,7 +29,10 @@ export async function GET() {
         HISTORICAL_TOP_CACHE_KEY
       );
       if (cached?.data) {
-        return NextResponse.json(cached);
+        return NextResponse.json({
+          ...cached,
+          playlistUrl: buildPlaylistUrl(),
+        });
       }
     }
 
@@ -37,7 +46,10 @@ export async function GET() {
       });
     }
 
-    return NextResponse.json(payload);
+    return NextResponse.json({
+      ...payload,
+      playlistUrl: buildPlaylistUrl(),
+    });
   } catch (err) {
     console.error("Error fetching historical top:", err);
     return NextResponse.json(
@@ -46,4 +58,3 @@ export async function GET() {
     );
   }
 }
-

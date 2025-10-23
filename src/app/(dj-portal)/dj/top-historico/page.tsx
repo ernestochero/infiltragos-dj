@@ -17,6 +17,7 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json());
 interface HistoricalTopResponse {
   data: TopEntry[];
   updatedAt: number;
+  playlistUrl?: string | null;
 }
 
 export default function HistoricalTopPage() {
@@ -38,6 +39,8 @@ export default function HistoricalTopPage() {
     if (!data?.data) return [];
     return data.data.slice(0, 30);
   }, [data]);
+
+  const playlistUrl = data?.playlistUrl ?? null;
 
   const updatedAtLabel = useMemo(() => {
     if (!data?.updatedAt) return "Top histórico";
@@ -81,7 +84,19 @@ export default function HistoricalTopPage() {
           >
             <FaArrowLeft className="h-4 w-4" /> Volver a la cola
           </Link>
-          <div className="text-sm text-gray-400">{updatedAtLabel}</div>
+          <div className="flex flex-col items-start gap-2 text-sm text-gray-400 sm:flex-row sm:items-center sm:gap-4">
+            <span>{updatedAtLabel}</span>
+            {playlistUrl ? (
+              <a
+                href={playlistUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-full border border-accent/40 px-3 py-1 text-xs font-semibold text-accent transition hover:border-accent hover:text-accent-hover"
+              >
+                Ver playlist en Spotify
+              </a>
+            ) : null}
+          </div>
         </header>
 
         <section className="rounded-xl bg-card-bg p-6 shadow-lg">
@@ -180,4 +195,3 @@ export default function HistoricalTopPage() {
     </main>
   );
 }
-

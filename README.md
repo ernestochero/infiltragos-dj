@@ -45,9 +45,9 @@ Log in at `/login` with those credentials. DJs go to `/dj/admin` while admins la
 Deploy on Vercel and connect to a PostgreSQL database (e.g. Supabase).
 
 ### Rankings cache & cron
-- Configura las credenciales de Upstash (`KV_REST_API_URL`, `KV_REST_API_TOKEN` o el `KV_REST_API_READ_ONLY_TOKEN`, más `KV_URL` si necesitas conexión Redis tradicional) y un secreto para el cron (`CRON_SECRET`).
+- Configura las credenciales de Upstash (`KV_REST_API_URL`, `KV_REST_API_TOKEN` o el `KV_REST_API_READ_ONLY_TOKEN`, más `KV_URL` si necesitas conexión Redis tradicional), el secreto del cron (`CRON_SECRET`) y, para sincronizar Spotify, `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`, `SPOTIFY_REFRESH_TOKEN` y `TOP_HISTORICAL_PLAYLIST_ID`.
 - `GET /api/top/weekly` devuelve el top de la última semana (cacheado por 7 días). Se recalcula manualmente con `POST /api/admin/top/rebuild` y se agenda con el cron semanal (`0 10 * * 1`).
-- `GET /api/top/historical` expone el top global histórico (cacheado por 24 h). Se reconstruye con `POST /api/admin/top/rebuild/historical` y se programa un cron diario (`0 6 * * *`).
+- `GET /api/top/historical` expone el top global histórico (cacheado por 24 h) y retorna el enlace a la playlist sincronizada. Se reconstruye con `POST /api/admin/top/rebuild/historical`, que también actualiza la playlist de Spotify si las variables están configuradas. Cron diario recomendado: `0 6 * * *`.
 
 ## Module structure
 

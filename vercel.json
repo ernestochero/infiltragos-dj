@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/admin/top/rebuild",
-      "schedule": "0 10 * * 1"
+      "schedule": "0 6 * * 1"
     },
     {
       "path": "/api/admin/top/rebuild/historical",
