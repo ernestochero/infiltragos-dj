@@ -6,13 +6,13 @@ import {
   WEEKLY_TOP_TTL_MS,
 } from "@dj/lib/top";
 
-const CRON_SECRET = process.env.CRON_SECRET;
+const CRON_SECRET = process.env.CRON_TOP_SECRET ?? process.env.CRON_SECRET;
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export async function POST(req: NextRequest) {
+async function handle(req: NextRequest) {
   if (!CRON_SECRET) {
     console.warn("CRON secret is not set; refusing rebuild request.");
     return NextResponse.json(
@@ -50,6 +50,10 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET() {
-  return NextResponse.json({ error: "Method Not Allowed" }, { status: 405 });
+export async function POST(req: NextRequest) {
+  return handle(req);
+}
+
+export async function GET(req: NextRequest) {
+  return handle(req);
 }
