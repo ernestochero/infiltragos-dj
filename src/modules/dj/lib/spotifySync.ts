@@ -56,13 +56,19 @@ async function getSpotifyToken(): Promise<string | null> {
   return cachedToken.token;
 }
 
+// Helper to quote and escape Spotify query values
+function quoteSpotifyValue(value: string): string {
+  // Escape double quotes by doubling them, then wrap in double quotes
+  return `"${value.replace(/"/g, '\\"')}"`;
+}
+
 async function findTrackUri(
   token: string,
   songTitle: string,
   artist: string
 ): Promise<string | null> {
   const query = encodeURIComponent(
-    `track:${songTitle} artist:${artist}`.replace(/\s+/g, " ")
+    `track:${quoteSpotifyValue(songTitle)} artist:${quoteSpotifyValue(artist)}`.replace(/\s+/g, " ")
   );
   const res = await fetch(
     `https://api.spotify.com/v1/search?type=track&limit=3&q=${query}`,
