@@ -131,12 +131,16 @@ export async function syncHistoricalPlaylist(
 
   const missing: Array<{ songTitle: string; artist: string }> = [];
   const uris: string[] = [];
-  for (const entry of entries) {
-    const uri = await findTrackUri(token, entry.songTitle, entry.artist);
+  // Perform all track URI lookups in parallel
+  const uriResults = await Promise.all(
+    entries.map(entry => findTrackUri(token, entry.songTitle, entry.artist))
+  );
+  for (let i = 0; i < entries.length; i++) {
+    const uri = uriResults[i];
     if (uri) {
       uris.push(uri);
     } else {
-      missing.push({ songTitle: entry.songTitle, artist: entry.artist });
+      missing.push({ songTitle: entries[i].songTitle, artist: entries[i].artist });
     }
   }
 
