@@ -5,7 +5,7 @@ import useSWR from "swr";
 import { useMemo, useState } from "react";
 import {
   FaArrowLeft,
-  FaFire,
+  FaCrown,
   FaMicrophoneLines,
   FaCirclePlay,
 } from "react-icons/fa6";
@@ -14,17 +14,17 @@ import type { TopEntry } from "@/modules/dj/lib/top";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-interface WeeklyTopResponse {
+interface HistoricalTopResponse {
   data: TopEntry[];
   updatedAt: number;
 }
 
-export default function WeeklyTopPage() {
-  const { data, isLoading, mutate, error } = useSWR<WeeklyTopResponse>(
-    "/api/top/weekly",
+export default function HistoricalTopPage() {
+  const { data, isLoading, mutate, error } = useSWR<HistoricalTopResponse>(
+    "/api/top/historical",
     fetcher,
     {
-      refreshInterval: 60_000,
+      refreshInterval: 5 * 60_000,
     }
   );
 
@@ -34,13 +34,13 @@ export default function WeeklyTopPage() {
   );
   const [toast, setToast] = useState(false);
 
-  const weeklyTop = useMemo(() => {
+  const topList = useMemo(() => {
     if (!data?.data) return [];
-    return data.data.slice(0, 10);
+    return data.data.slice(0, 30);
   }, [data]);
 
   const updatedAtLabel = useMemo(() => {
-    if (!data?.updatedAt) return "Top 10 semanal";
+    if (!data?.updatedAt) return "Top histórico";
     try {
       const date = new Date(data.updatedAt);
       const formatted = date.toLocaleString(undefined, {
@@ -48,15 +48,16 @@ export default function WeeklyTopPage() {
         minute: "2-digit",
         day: "numeric",
         month: "short",
+        year: "numeric",
       });
-      return `Top 10 semanal · actualizado ${formatted}`;
+      return `Top histórico · actualizado ${formatted}`;
     } catch {
-      return "Top 10 semanal";
+      return "Top histórico";
     }
   }, [data]);
 
   const showSkeleton = isLoading && !data;
-  const isEmpty = !showSkeleton && !error && weeklyTop.length === 0;
+  const isEmpty = !showSkeleton && !error && topList.length === 0;
 
   function openModalForSong(songTitle: string, artist: string) {
     setPrefill({ songTitle, artist });
@@ -85,13 +86,13 @@ export default function WeeklyTopPage() {
 
         <section className="rounded-xl bg-card-bg p-6 shadow-lg">
           <div className="flex items-center gap-3">
-            <FaFire className="h-6 w-6 text-accent" />
+            <FaCrown className="h-6 w-6 text-accent" />
             <div>
               <h1 className="text-2xl font-extrabold tracking-tight">
-                Top 10 semanal de pedidos
+                Top 30 histórico de pedidos
               </h1>
               <p className="text-sm text-gray-400">
-                Canciones más pedidas en los últimos 7 días.
+                El resumen global de las canciones con más demanda desde que usamos la app.
               </p>
             </div>
           </div>
@@ -99,7 +100,7 @@ export default function WeeklyTopPage() {
           <div className="mt-6">
             {showSkeleton ? (
               <div className="space-y-3">
-                {Array.from({ length: 5 }).map((_, idx) => (
+                {Array.from({ length: 8 }).map((_, idx) => (
                   <div
                     key={idx}
                     className="h-20 animate-pulse rounded-lg bg-gray-700/40"
@@ -108,15 +109,15 @@ export default function WeeklyTopPage() {
               </div>
             ) : error ? (
               <div className="rounded-lg bg-rose-500/10 p-6 text-center text-sm text-rose-200 border border-rose-500/20">
-                No pudimos cargar el top semanal. Intenta más tarde.
+                No pudimos cargar el top histórico. Intenta más tarde.
               </div>
             ) : isEmpty ? (
               <div className="rounded-lg bg-gray-800/60 p-6 text-center text-sm text-gray-400">
-                Aún no hay suficientes datos para el ranking semanal.
+                Aún no registramos suficientes pedidos para este ranking.
               </div>
             ) : (
               <ul className="space-y-4">
-                {weeklyTop.map((entry, idx) => (
+                {topList.map((entry, idx) => (
                   <li
                     key={`${entry.songTitle}-${entry.artist}`}
                     className="flex flex-col gap-4 rounded-lg border border-gray-700 bg-gray-800/50 p-4 shadow-sm transition hover:border-accent/60 hover:bg-gray-800"
@@ -145,7 +146,7 @@ export default function WeeklyTopPage() {
                     </div>
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <p className="text-xs text-gray-500">
-                        Sumamos votos y repeticiones para calcular la demanda.
+                        Sumamos pedidos y votos acumulados para determinar la posición.
                       </p>
                       <button
                         onClick={() => openModalForSong(entry.songTitle, entry.artist)}
@@ -179,3 +180,4 @@ export default function WeeklyTopPage() {
     </main>
   );
 }
+
