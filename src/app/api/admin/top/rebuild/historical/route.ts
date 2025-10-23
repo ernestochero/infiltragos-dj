@@ -5,6 +5,7 @@ import {
   HISTORICAL_TOP_CACHE_KEY,
   HISTORICAL_TOP_TTL_MS,
 } from "@dj/lib/top";
+import { syncHistoricalPlaylist } from "@dj/lib/spotifySync";
 
 const CRON_SECRET = process.env.CRON_TOP_SECRET ?? process.env.CRON_SECRET;
 
@@ -35,11 +36,15 @@ async function handle(req: NextRequest) {
         px: HISTORICAL_TOP_TTL_MS,
       });
     }
+
+    const spotify = await syncHistoricalPlaylist(data);
+
     return NextResponse.json({
       ok: true,
       updatedAt: payload.updatedAt,
       count: data.length,
       cached: Boolean(redis),
+      spotify,
     });
   } catch (err) {
     console.error("Error rebuilding historical top:", err);
