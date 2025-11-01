@@ -65,6 +65,31 @@ Create a folder under `src/modules/<name>` and mount any pages or API handlers u
 
 The DJ module exposes its API handlers in `src/app/api` and UI components under `src/modules/dj/components`.
 
+## Ticket Module
+
+The ticketing workflow lives under `src/modules/ticket` and is mounted at `/tickets`.
+
+- Admin views:
+  - `/tickets` listado de eventos con métricas.
+  - `/tickets/new` formulario de creación con upload a S3.
+  - `/tickets/[id]` dashboard del evento (tipos de ticket, envíos manuales, historial).
+  - `/tickets/scanner` lector con cámara + ingreso manual.
+- API admin (`x-admin-token: DJ_ADMIN_TOKEN` o sesión ADMIN):
+  - `GET/POST /api/admin/tickets/events`
+  - `GET/PUT /api/admin/tickets/events/:eventId`
+  - `GET/POST /api/admin/tickets/events/:eventId/ticket-types`
+  - `PUT /api/admin/tickets/ticket-types/:ticketTypeId`
+  - `POST /api/admin/tickets/issues` (emisión + correo)
+  - `POST /api/admin/tickets/scan` (validación/registro)
+  - `POST /api/admin/tickets/uploads/banner` (upload directo a S3)
+- Público: `/tickets/verify/:code` muestra el estado del ticket incluido en el QR.
+
+### Configuración
+
+1. **S3**: define `TICKET_S3_BUCKET`, `TICKET_S3_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` (opcional `TICKET_S3_PREFIX`) para subir banners.
+2. **Correo SMTP** (opcional pero recomendado): `TICKET_EMAIL_FROM`, `TICKET_SMTP_HOST`, `TICKET_SMTP_PORT`, `TICKET_SMTP_USER`, `TICKET_SMTP_PASS` y `TICKET_EMAIL_REPLY_TO`. Si faltan datos, el envío se omite pero la emisión se registra.
+3. Ajusta `NEXT_PUBLIC_APP_URL` para que los QR apunten a tu dominio (se usa en el payload).
+
 ## Contests (Public Voting)
 
 This repository includes a starting point for public voting contests (band battles / rounds):
