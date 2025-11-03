@@ -6,6 +6,7 @@ import type { TicketEventStatus } from '@prisma/client';
 import TicketTypeForm from '@ticket/components/TicketTypeForm';
 import IssueTicketForm from '@ticket/components/IssueTicketForm';
 import EventDetailsForm, { EventDetailsFormEvent } from '@ticket/components/EventDetailsForm';
+import Modal from '@/modules/Modal';
 
 type TicketStatus = 'CREATED' | 'SENT' | 'REDEEMED' | 'CANCELLED';
 
@@ -121,6 +122,8 @@ export default function TicketEventDetailPage({ params }: { params: { eventId: s
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [editingDetails, setEditingDetails] = useState(false);
+  const [showTypeModal, setShowTypeModal] = useState(false);
+  const [showIssueModal, setShowIssueModal] = useState(false);
 
   const refresh = async () => {
     setLoading(true);
@@ -237,6 +240,12 @@ export default function TicketEventDetailPage({ params }: { params: { eventId: s
                 >
                   {editingDetails ? 'Cerrar edición' : 'Editar detalles'}
                 </button>
+                <Link
+                  href={`/tickets/scanner?eventId=${data.event.id}`}
+                  className="rounded-md border border-indigo-500/40 bg-indigo-500/10 px-3 py-1 text-xs font-semibold text-indigo-200 hover:bg-indigo-500/20"
+                >
+                  Escanear tickets
+                </Link>
                 {data.event.status === 'DRAFT' && (
                   <button
                     type="button"
@@ -291,9 +300,8 @@ export default function TicketEventDetailPage({ params }: { params: { eventId: s
 
       {data && (
         <>
-          <div className="grid gap-4 lg:grid-cols-3">
-            <div className="space-y-4 rounded-xl border border-white/10 bg-black/20 p-4 lg:col-span-2">
-              {data.event.bannerUrl && (
+          <div className="space-y-4 rounded-xl border border-white/10 bg-black/20 p-4">
+            {data.event.bannerUrl && (
                 <div className="overflow-hidden rounded-lg border border-white/10">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={data.event.bannerUrl} alt={data.event.title} className="h-52 w-full object-cover" />
@@ -326,51 +334,53 @@ export default function TicketEventDetailPage({ params }: { params: { eventId: s
                   <p className="whitespace-pre-line text-sm text-gray-200">{data.event.description}</p>
                 </div>
               )}
+            <div className="grid gap-3 sm:grid-cols-4">
+              <SummaryCard title="Emitidos" value={totals?.total ?? 0} tone="default" />
+              <SummaryCard title="Validados" value={totals?.redeemed ?? 0} tone="success" />
+              <SummaryCard title="Pendientes" value={totals?.pending ?? 0} tone="warning" />
+              <SummaryCard title="Cancelados" value={totals?.cancelled ?? 0} tone="danger" />
             </div>
-
-            <div className="space-y-3 rounded-xl border border-white/10 bg-black/20 p-4">
-              <h3 className="text-base font-semibold text-gray-100">Resumen</h3>
-              <div className="grid gap-3">
-                <div className="rounded-lg border border-white/10 bg-white/5 p-3">
-                  <p className="text-xs text-gray-400">Tickets emitidos</p>
-                  <p className="text-xl font-semibold text-gray-100">{totals?.total ?? 0}</p>
-                </div>
-                <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3">
-                  <p className="text-xs text-emerald-200">Validados</p>
-                  <p className="text-lg font-semibold text-emerald-200">{totals?.redeemed ?? 0}</p>
-                </div>
-                <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
-                  <p className="text-xs text-amber-100">Pendientes</p>
-                  <p className="text-lg font-semibold text-amber-100">{totals?.pending ?? 0}</p>
-                </div>
-                <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-3">
-                  <p className="text-xs text-rose-100">Cancelados</p>
-                  <p className="text-lg font-semibold text-rose-100">{totals?.cancelled ?? 0}</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => void refresh()}
-                  className="w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-gray-100 hover:bg-white/10"
-                >
-                  Actualizar datos
-                </button>
-              </div>
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => void refresh()}
+                className="rounded-md border border-white/10 bg-white/5 px-3 py-2 text-xs text-gray-100 hover:bg-white/10"
+              >
+                Actualizar datos
+              </button>
             </div>
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
+          <div className="rounded-xl border border-white/10 bg-black/20 p-4 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
                 <h3 className="text-lg font-semibold text-gray-100">Tipos de ticket</h3>
                 <span className="text-xs text-gray-400">{data.ticketTypes.length} configurados</span>
               </div>
-              <div className="space-y-3">
-                {data.ticketTypes.length === 0 && (
-                  <div className="rounded-md border border-white/10 bg-black/20 px-3 py-4 text-sm text-gray-300">
-                    Aún no hay tipos de ticket. Crea uno para controlar cupos y precios.
-                  </div>
-                )}
-                {data.ticketTypes.map((type) => (
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowTypeModal(true)}
+                  className="rounded-md border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-gray-100 hover:bg-white/10"
+                >
+                  Nuevo tipo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowIssueModal(true)}
+                  className="rounded-md border border-indigo-500/40 bg-indigo-500/10 px-3 py-2 text-xs font-semibold text-indigo-100 hover:bg-indigo-500/20"
+                >
+                  Enviar tickets
+                </button>
+              </div>
+            </div>
+            <div className="space-y-3">
+              {data.ticketTypes.length === 0 && (
+                <div className="rounded-md border border-white/10 bg-black/20 px-3 py-4 text-sm text-gray-300">
+                  Aún no hay tipos de ticket. Crea uno para controlar cupos y precios.
+                </div>
+              )}
+              {data.ticketTypes.map((type) => (
                   <div
                     key={type.id}
                     className="rounded-lg border border-white/10 bg-black/20 p-4 transition hover:border-indigo-500/50"
@@ -421,30 +431,11 @@ export default function TicketEventDetailPage({ params }: { params: { eventId: s
                       <StatPill label="Cancelados" value={type.stats.cancelled} tone="danger" />
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <TicketTypeForm eventId={data.event.id} onCreated={refresh} />
-              <IssueTicketForm
-                eventId={data.event.id}
-                ticketTypes={data.ticketTypes.map((type) => ({
-                  id: type.id,
-                  name: type.name,
-                  totalQuantity: type.totalQuantity,
-                  stats: {
-                    emitted: type.stats.total,
-                    redeemed: type.stats.redeemed,
-                    cancelled: type.stats.cancelled,
-                  },
-                }))}
-                onIssued={refresh}
-              />
+              ))}
             </div>
           </div>
 
-          <div className="space-y-4">
+          <div className="rounded-xl border border-white/10 bg-black/20 p-4 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-100">Emisiones recientes</h3>
               <span className="text-xs text-gray-400">
@@ -525,6 +516,46 @@ export default function TicketEventDetailPage({ params }: { params: { eventId: s
           </div>
         </>
       )}
+
+      <Modal open={showTypeModal && !!data} onClose={() => setShowTypeModal(false)}>
+        {data && (
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-gray-100">Nuevo tipo de ticket</h3>
+            <TicketTypeForm
+              eventId={data.event.id}
+              onCreated={() => {
+                setShowTypeModal(false);
+                void refresh();
+              }}
+            />
+          </div>
+        )}
+      </Modal>
+
+      <Modal open={showIssueModal && !!data} onClose={() => setShowIssueModal(false)}>
+        {data && (
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-gray-100">Enviar tickets</h3>
+            <IssueTicketForm
+              eventId={data.event.id}
+              ticketTypes={data.ticketTypes.map((type) => ({
+                id: type.id,
+                name: type.name,
+                totalQuantity: type.totalQuantity,
+                stats: {
+                  emitted: type.stats.total,
+                  redeemed: type.stats.redeemed,
+                  cancelled: type.stats.cancelled,
+                },
+              }))}
+              onIssued={() => {
+                setShowIssueModal(false);
+                void refresh();
+              }}
+            />
+          </div>
+        )}
+      </Modal>
     </section>
   );
 }
@@ -561,6 +592,21 @@ function StatPill({
     <div className={`rounded-md border px-3 py-2 text-xs ${tones[tone]}`}>
       <p className="uppercase tracking-wide text-[11px] text-gray-400">{label}</p>
       <p className="text-base font-semibold">{value}</p>
+    </div>
+  );
+}
+
+function SummaryCard({ title, value, tone }: { title: string; value: number; tone: Tone }) {
+  const tones: Record<Tone, string> = {
+    success: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-100',
+    warning: 'border-amber-500/40 bg-amber-500/10 text-amber-100',
+    danger: 'border-rose-500/40 bg-rose-500/10 text-rose-100',
+    default: 'border-white/10 bg-white/5 text-gray-100',
+  };
+  return (
+    <div className={`rounded-lg border px-3 py-3 ${tones[tone]}`}>
+      <p className="text-xs uppercase tracking-wide text-gray-300">{title}</p>
+      <p className="text-xl font-semibold">{value}</p>
     </div>
   );
 }

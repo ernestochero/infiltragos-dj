@@ -48,6 +48,7 @@ export const scanTicketSchema = z.object({
   code: z.string().trim().min(6),
   device: optionalString,
   location: optionalString,
+  eventId: optionalString,
 });
 
 export type EventCreateInput = z.infer<typeof eventCreateSchema>;

@@ -2,6 +2,8 @@
 
 import { BrowserMultiFormatReader, IScannerControls } from '@zxing/browser';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
 type ScanStatus = 'idle' | 'loading' | 'success' | 'warning' | 'error';
 
@@ -23,6 +25,13 @@ type ScanResponse = {
     } | null;
   };
   result: 'ACCEPTED' | 'DUPLICATE' | 'CANCELLED';
+};
+
+type EventContext = {
+  id: string;
+  title: string;
+  startsAt?: string | null;
+  venue?: string | null;
 };
 
 const toneMap: Record<ScanResponse['result'], ScanStatus> = {
@@ -53,6 +62,8 @@ function formatDate(value?: string | null) {
 }
 
 export default function TicketScannerPage() {
+  const searchParams = useSearchParams();
+  const eventFilterId = (searchParams.get('eventId') || '').trim();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const controlsRef = useRef<IScannerControls>();
   const [codeInput, setCodeInput] = useState('');
@@ -62,13 +73,104 @@ export default function TicketScannerPage() {
   const [busy, setBusy] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
   const [scannerLocked, setScannerLocked] = useState(false);
+  const [eventContext, setEventContext] = useState<EventContext | null>(null);
+  const [eventContextError, setEventContextError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!eventFilterId) {
+      setEventContext(null);
+      setEventContextError(null);
+      return;
+    }
+    let cancelled = false;
+    const fetchEvent = async () => {
+      try {
+        setEventContextError(null);
+        const res = await fetch(`/api/admin/tickets/events/${eventFilterId}`);
+        if (!res.ok) throw new Error('No se pudo cargar el evento');
+        const data = await res.json();
+        if (!cancelled) {
+          setEventContext({
+            id: data.event.id,
+            title: data.event.title,
+            startsAt: data.event.startsAt,
+            venue: data.event.venue,
+          });
+        }
+      } catch (err) {
+        console.error(err);
+        if (!cancelled) {
+          setEventContextError('No se pudo cargar el evento seleccionado.');
+          setEventContext(null);
+        }
+      }
+    };
+    fetchEvent();
+    return () => {
+      cancelled = true;
+    };
+  }, [eventFilterId]);
+
+  const validateTicket = useCallback(
+    async (code: string) => {
+      try {
+        setBusy(true);
+        setStatus('loading');
+        setMessage(null);
+        const res = await fetch('/api/admin/tickets/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            code: code.trim(),
+            device: 'scanner-module',
+            eventId: eventFilterId || undefined,
+          }),
+        });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        setStatus('error');
+        setMessage(data?.message || 'Ticket no encontrado');
+        setLastScan(null);
+        setShowDialog(false);
+        setScannerLocked(false);
+        return;
+      }
+      const data = (await res.json()) as ScanResponse;
+      setLastScan(data);
+      setStatus(toneMap[data.result]);
+      if (data.result === 'ACCEPTED') {
+        setMessage('Ticket validado correctamente');
+        setShowDialog(true);
+        setScannerLocked(true);
+      } else if (data.result === 'DUPLICATE') {
+        setMessage('Ticket ya fue validado anteriormente');
+        setShowDialog(true);
+        setScannerLocked(true);
+      } else {
+        setMessage('Ticket cancelado');
+        setShowDialog(true);
+        setScannerLocked(true);
+      }
+    } catch (error) {
+      console.error(error);
+      setStatus('error');
+      setMessage('Error al validar el ticket');
+      setLastScan(null);
+      setShowDialog(false);
+      setScannerLocked(false);
+      } finally {
+        setBusy(false);
+      }
+    },
+    [eventFilterId],
+  );
 
   const handleResult = useCallback(
     async (value: string) => {
       if (!value || busy || scannerLocked) return;
       await validateTicket(extractCode(value));
     },
-    [busy, scannerLocked],
+    [busy, scannerLocked, validateTicket],
   );
 
   useEffect(() => {
@@ -103,53 +205,6 @@ export default function TicketScannerPage() {
     };
   }, [handleResult]);
 
-  const validateTicket = async (code: string) => {
-    try {
-      setBusy(true);
-      setStatus('loading');
-      setMessage(null);
-      const res = await fetch('/api/admin/tickets/scan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: code.trim(), device: 'scanner-module' }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        setStatus('error');
-        setMessage(data?.message || 'Ticket no encontrado');
-        setLastScan(null);
-        setShowDialog(false);
-        setScannerLocked(false);
-        return;
-      }
-      const data = (await res.json()) as ScanResponse;
-      setLastScan(data);
-      setStatus(toneMap[data.result]);
-      if (data.result === 'ACCEPTED') {
-        setMessage('Ticket validado correctamente');
-        setShowDialog(true);
-        setScannerLocked(true);
-      } else if (data.result === 'DUPLICATE') {
-        setMessage('Ticket ya fue validado anteriormente');
-        setShowDialog(true);
-        setScannerLocked(true);
-      } else {
-        setMessage('Ticket cancelado');
-        setShowDialog(true);
-        setScannerLocked(true);
-      }
-    } catch (error) {
-      console.error(error);
-      setStatus('error');
-      setMessage('Error al validar el ticket');
-      setLastScan(null);
-      setShowDialog(false);
-      setScannerLocked(false);
-    } finally {
-      setBusy(false);
-    }
-  };
-
   const handleManualSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!codeInput.trim()) return;
@@ -171,6 +226,28 @@ export default function TicketScannerPage() {
       <div>
         <h2 className="text-xl font-semibold text-gray-100">Scanner</h2>
         <p className="text-sm text-gray-300">Escanea el QR o ingresa el código manualmente.</p>
+        {eventFilterId && eventContext && (
+          <div className="mt-3 flex items-center justify-between rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-gray-400">Evento</p>
+              <p className="font-semibold text-gray-100">{eventContext.title}</p>
+              <p className="text-xs text-gray-400">
+                {formatDate(eventContext.startsAt)} · {eventContext.venue ?? 'Venue por definir'}
+              </p>
+            </div>
+            <Link
+              href={`/tickets/${eventContext.id}`}
+              className="text-xs text-indigo-300 hover:text-indigo-200"
+            >
+              Ver detalles
+            </Link>
+          </div>
+        )}
+        {eventFilterId && eventContextError && (
+          <p className="mt-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+            {eventContextError}
+          </p>
+        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[320px_1fr]">

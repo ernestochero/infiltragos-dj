@@ -476,6 +476,14 @@ export async function scanTicket(
       throw new TicketModuleError('TICKET_NOT_FOUND', 'Ticket no encontrado', 404);
     }
 
+    if (input.eventId && ticket.eventId !== input.eventId) {
+      throw new TicketModuleError(
+        'TICKET_EVENT_MISMATCH',
+        'El ticket no pertenece a este evento',
+        404,
+      );
+    }
+
     if (ticket.status === TicketStatus.CANCELLED) {
       await tx.ticketScan.create({
         data: {
