@@ -341,11 +341,11 @@ export async function updateTicketType(
 
   const data: Prisma.TicketTypeUpdateInput = {
     name: input.name ?? undefined,
-    description: input.description ?? null,
+    description: input.description !== undefined ? input.description ?? null : undefined,
     priceCents: input.price !== undefined ? Math.round(input.price * 100) : undefined,
     currency: input.currency ?? undefined,
     totalQuantity: input.totalQuantity ?? undefined,
-    perOrderLimit: input.perOrderLimit ?? null,
+    perOrderLimit: input.perOrderLimit !== undefined ? input.perOrderLimit ?? null : undefined,
     saleStartsAt: input.saleStartsAt !== undefined ? parseDate(input.saleStartsAt) : undefined,
     saleEndsAt: input.saleEndsAt !== undefined ? parseDate(input.saleEndsAt) : undefined,
     validFrom: input.validFrom !== undefined ? parseDate(input.validFrom) : undefined,
