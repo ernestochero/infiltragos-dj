@@ -201,6 +201,194 @@ model RaffleWinner {
   @@index([raffleId])
 }
 
+model WalletSignup {
+  id          String   @id @default(cuid())
+  fullName    String
+  dni         String   @db.VarChar(16)
+  phoneNumber String   @db.VarChar(32)
+  email       String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  profile     WalletProfile?
+
+  @@index([phoneNumber])
+  @@index([email])
+  @@index([dni])
+  @@unique([phoneNumber])
+}
+
+model WalletProfile {
+  id            String                @id @default(cuid())
+  signupId      String?               @unique
+  signup        WalletSignup?         @relation(fields: [signupId], references: [id], onDelete: SetNull)
+  status        WalletProfileStatus   @default(PENDING)
+  phoneNumber   String                @db.VarChar(32)
+  phoneVerified Boolean               @default(false)
+  passwordHash  String?
+  lastLoginAt   DateTime?
+  preferences   Json?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  card          WalletCard?
+  passes        WalletPass[]
+  ledgerEntries WalletPointLedger[]
+  redemptions   WalletRedemption[]
+  transactions  PosTransaction[]
+  otpRequests   WalletOtpRequest[]
+
+  @@index([phoneNumber])
+  @@unique([phoneNumber])
+}
+
+model WalletCard {
+  id          String           @id @default(cuid())
+  profileId   String           @unique
+  profile     WalletProfile    @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  qrCode      String?
+  passPublicUrl String?
+  cardState   WalletCardState  @default(ACTIVE)
+  expiresAt   DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model WalletPass {
+  id           String              @id @default(cuid())
+  profileId    String
+  profile      WalletProfile       @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  provider     WalletPassProvider
+  passUrl      String
+  deviceToken  String?
+  lastSyncedAt DateTime?
+  metadata     Json?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  @@index([profileId, provider])
+}
+
+model WalletPointLedger {
+  id               String              @id @default(cuid())
+  profileId        String
+  profile          WalletProfile       @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  source           WalletLedgerSource
+  pointsDelta      Int
+  balanceAfter     Int
+  referenceId      String?
+  description      String?
+  posTransactionId String?
+  posTransaction   PosTransaction?     @relation(fields: [posTransactionId], references: [id], onDelete: SetNull)
+  metadata         Json?
+  createdAt        DateTime            @default(now())
+
+  @@index([profileId, createdAt])
+  @@index([posTransactionId])
+}
+
+model WalletReward {
+  id             String            @id @default(cuid())
+  name           String
+  description    String?
+  pointsRequired Int
+  activeFrom     DateTime?
+  activeTo       DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  redemptions    WalletRedemption[]
+}
+
+model WalletRedemption {
+  id           String                 @id @default(cuid())
+  profileId    String
+  rewardId     String
+  profile      WalletProfile          @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  reward       WalletReward           @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+  pointsSpent  Int
+  status       WalletRedemptionStatus @default(PENDING)
+  metadata     Json?
+  redeemedAt   DateTime               @default(now())
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+
+  @@index([profileId, redeemedAt])
+  @@index([rewardId])
+}
+
+model PosTransaction {
+  id                 String             @id @default(cuid())
+  externalId         String?            @unique
+  profileId          String?
+  profile            WalletProfile?     @relation(fields: [profileId], references: [id], onDelete: SetNull)
+  totalAmountCents   Int?
+  earnedPoints       Int                @default(0)
+  occurredAt         DateTime
+  metadata           Json?
+  createdAt          DateTime           @default(now())
+
+  ledgerEntries      WalletPointLedger[]
+
+  @@index([profileId])
+  @@index([occurredAt])
+}
+
+model WalletOtpRequest {
+  id          String            @id @default(cuid())
+  profileId   String
+  profile     WalletProfile     @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  channel     WalletOtpChannel  @default(WHATSAPP)
+  destination String            @db.VarChar(64)
+  codeHash    String
+  expiresAt   DateTime
+  attempts    Int               @default(0)
+  maxAttempts Int               @default(5)
+  consumedAt  DateTime?
+  metadata    Json?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([profileId, expiresAt])
+  @@index([destination])
+}
+
+enum WalletProfileStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+}
+
+enum WalletCardState {
+  ACTIVE
+  SUSPENDED
+  REVOKED
+}
+
+enum WalletPassProvider {
+  APPLE
+  GOOGLE
+}
+
+enum WalletLedgerSource {
+  POS
+  MANUAL_ADJUSTMENT
+  PROMOTION
+  REWARD_REDEMPTION
+  SYSTEM
+}
+
+enum WalletRedemptionStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+enum WalletOtpChannel {
+  WHATSAPP
+  EMAIL
+}
+
 enum SurveyStatus {
   DRAFT
   PUBLISHED
