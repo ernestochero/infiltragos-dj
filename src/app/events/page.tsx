@@ -22,6 +22,18 @@ export default async function EventsIndexPage() {
     }
   });
 
+  upcoming.sort((a, b) => {
+    const aTime = a.startsAt ? new Date(a.startsAt).getTime() : 0;
+    const bTime = b.startsAt ? new Date(b.startsAt).getTime() : 0;
+    return aTime - bTime;
+  });
+
+  past.sort((a, b) => {
+    const aTime = a.startsAt ? new Date(a.startsAt).getTime() : 0;
+    const bTime = b.startsAt ? new Date(b.startsAt).getTime() : 0;
+    return bTime - aTime;
+  });
+
   return (
     <main className="min-h-screen bg-slate-950 text-white">
       <div className="mx-auto w-full max-w-5xl space-y-8 px-4 py-10">
