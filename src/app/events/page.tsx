@@ -147,6 +147,7 @@ function formatDate(value?: Date | string | null) {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
+    timeZone: 'America/Lima',
   });
 }
 
@@ -159,6 +160,7 @@ function formatDetailedDate(value?: Date | string | null) {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
+    timeZone: 'America/Lima',
   });
 }
 
@@ -169,6 +171,7 @@ function formatTime(value?: Date | string | null) {
   return date.toLocaleTimeString('es-PE', {
     hour: '2-digit',
     minute: '2-digit',
+    timeZone: 'America/Lima',
   });
 }
 
