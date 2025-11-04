@@ -19,6 +19,20 @@ import { TicketModuleError, assertOrFail } from './errors';
 import { APP_BASE_URL, EMAIL_ENABLED } from './config';
 import { sendTicketEmail } from './email';
 
+type TicketTypeWithCounts = Prisma.TicketTypeGetPayload<{
+  include: { _count: { select: { tickets: true; issues: true } } };
+}>;
+
+export type PublicTicketType = TicketTypeWithCounts & {
+  stats: {
+    total: number;
+    redeemed: number;
+    sent: number;
+    created: number;
+    cancelled: number;
+  };
+};
+
 export type TicketEventListItem = Awaited<ReturnType<typeof listEvents>>[number];
 
 const QR_BASE = APP_BASE_URL.replace(/\/$/, '');
@@ -212,6 +226,34 @@ export async function getEventDetail(eventId: string) {
   };
 
   return { event, ticketTypes, issues, summary };
+}
+
+export async function getPublicEvent(identifier: string) {
+  const event = await prisma.ticketEvent.findFirst({
+    where: {
+      OR: [{ slug: identifier }, { id: identifier }],
+    },
+    include: {
+      _count: { select: { tickets: true } },
+    },
+  });
+  assertOrFail(
+    event && event.status === TicketEventStatus.PUBLISHED,
+    'EVENT_NOT_AVAILABLE',
+    'Evento no disponible',
+    404,
+  );
+
+  const ticketTypes = await prisma.ticketType.findMany({
+    where: { eventId: event.id, status: { not: TicketTypeStatus.ARCHIVED } },
+    orderBy: { createdAt: 'asc' },
+    include: {
+      _count: { select: { tickets: true, issues: true } },
+    },
+  });
+
+  const enhanced = (await enrichTicketTypesWithStats(ticketTypes)) as PublicTicketType[];
+  return { event, ticketTypes: enhanced };
 }
 
 export async function createTicketType(eventId: string, input: TicketTypeInput) {

@@ -51,8 +51,17 @@ export const scanTicketSchema = z.object({
   eventId: optionalString,
 });
 
+export const publicCheckoutSchema = z.object({
+  ticketTypeId: z.string().min(1),
+  quantity: z.number().int().min(1).max(10),
+  buyerName: z.string().trim().min(3).max(120),
+  buyerEmail: z.string().trim().email(),
+  buyerPhone: optionalString,
+});
+
 export type EventCreateInput = z.infer<typeof eventCreateSchema>;
 export type EventUpdateInput = z.infer<typeof eventUpdateSchema>;
 export type TicketTypeInput = z.infer<typeof ticketTypeSchema>;
 export type IssueTicketsInput = z.infer<typeof issueTicketsSchema>;
 export type ScanTicketInput = z.infer<typeof scanTicketSchema>;
+export type PublicCheckoutInput = z.infer<typeof publicCheckoutSchema>;

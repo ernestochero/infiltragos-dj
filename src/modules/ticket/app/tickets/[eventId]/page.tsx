@@ -55,6 +55,7 @@ type IssueItem = {
 type EventDetailResponse = {
   event: {
     id: string;
+    slug?: string | null;
     title: string;
     summary?: string | null;
     description?: string | null;
@@ -121,10 +122,11 @@ export default function TicketEventDetailPage({ params }: { params: { eventId: s
   const [error, setError] = useState<string | null>(null);
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [copyMessage, setCopyMessage] = useState<string | null>(null);
   const [editingDetails, setEditingDetails] = useState(false);
   const [showTypeModal, setShowTypeModal] = useState(false);
   const [showIssueModal, setShowIssueModal] = useState(false);
-
+  
   const refresh = async () => {
     setLoading(true);
     setError(null);
@@ -216,6 +218,22 @@ export default function TicketEventDetailPage({ params }: { params: { eventId: s
     void refresh();
   };
 
+  const handleCopyEventUrl = async (event: EventDetailResponse['event']) => {
+    const slugOrId = event.slug || event.id;
+    const baseUrl =
+      process.env.NEXT_PUBLIC_APP_URL || process.env.APP_BASE_URL || 'http://localhost:3000';
+    const url = `${baseUrl.replace(/\/$/, '')}/events/${slugOrId}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopyMessage('URL del evento copiada al portapapeles');
+    } catch (err) {
+      console.error('copy url error', err);
+      setCopyMessage('No se pudo copiar la URL (revisa la consola)');
+    } finally {
+      setTimeout(() => setCopyMessage(null), 3000);
+    }
+  };
+
   return (
     <section className="space-y-6">
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
@@ -239,6 +257,13 @@ export default function TicketEventDetailPage({ params }: { params: { eventId: s
                   className="rounded-md border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-gray-100 hover:bg-white/10"
                 >
                   {editingDetails ? 'Cerrar edición' : 'Editar detalles'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleCopyEventUrl(data.event)}
+                  className="rounded-md border border-indigo-500/40 bg-indigo-500/10 px-3 py-1 text-xs font-semibold text-indigo-200 hover:bg-indigo-500/20"
+                >
+                  Copiar URL público
                 </button>
                 <Link
                   href={`/tickets/scanner?eventId=${data.event.id}`}
@@ -285,6 +310,11 @@ export default function TicketEventDetailPage({ params }: { params: { eventId: s
       {statusMessage && !error && (
         <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
           {statusMessage}
+        </div>
+      )}
+      {copyMessage && (
+        <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
+          {copyMessage}
         </div>
       )}
 
