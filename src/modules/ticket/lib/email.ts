@@ -188,7 +188,13 @@ export async function sendTicketEmail(payload: TicketEmailPayload) {
         margin: 1,
         color: { dark: '#0f172a', light: '#ffffff' },
       });
-      const base64 = dataUrl.split(',')[1];
+      const parts = dataUrl.split(',');
+      const base64 = parts[1];
+      if (!base64) {
+        throw new Error(
+          `Invalid QR code data URL format for ticket ${ticket.code}`,
+        );
+      }
       return {
         filename: `ticket-${ticket.code}.png`,
         content: Buffer.from(base64, 'base64'),
