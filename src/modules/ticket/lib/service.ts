@@ -55,7 +55,7 @@ async function ensureUniqueSlug(slugCandidate: string) {
     const existing = await prisma.ticketEvent.findUnique({ where: { slug } });
     if (!existing) return slug;
     attempt += 1;
-    const suffix = attempt < 5 ? `${attempt + 1}` : randomBytes(2).toString('hex');
+    const suffix = attempt < 5 ? `${attempt}` : randomBytes(2).toString('hex');
     slug = `${slugCandidate}-${suffix}`.slice(0, 72);
   }
 }
