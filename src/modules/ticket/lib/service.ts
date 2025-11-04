@@ -341,7 +341,7 @@ export async function updateTicketType(
 
   const data: Prisma.TicketTypeUpdateInput = {
     name: input.name ?? undefined,
-    description: input.description ?? null,
+    description: input.description !== undefined ? input.description ?? null : undefined,
     priceCents: input.price !== undefined ? Math.round(input.price * 100) : undefined,
     currency: input.currency ?? undefined,
     totalQuantity: input.totalQuantity ?? undefined,
