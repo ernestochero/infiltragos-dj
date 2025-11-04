@@ -33,6 +33,9 @@
       ],
       "@raffle/*": [
         "./src/modules/raffle/*"
+      ],
+      "@ticket/*": [
+        "./src/modules/ticket/*"
       ]
     },
     "incremental": true,

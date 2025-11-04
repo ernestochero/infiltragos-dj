@@ -16,6 +16,7 @@ export default function AdminPage() {
         <li><Link href="/dj/admin" className="text-blue-500 underline">DJ Module</Link></li>
         <li><Link href="/survey" className="text-blue-500 underline">Survey Module</Link></li>
         <li><Link href="/contest" className="text-blue-500 underline">Contest Module</Link></li>
+        <li><Link href="/tickets" className="text-blue-500 underline">Ticket Module</Link></li>
       </ul>
     </main>
   );

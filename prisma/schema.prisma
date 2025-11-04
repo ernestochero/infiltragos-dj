@@ -115,6 +115,8 @@ model User {
   id   String   @id @default(cuid())
   name String
   role UserRole
+  validatedTickets Ticket[] @relation("TicketValidatedBy")
+  scannedTickets   TicketScan[] @relation("TicketScanBy")
 }
 
 model Survey {
@@ -201,6 +203,123 @@ model RaffleWinner {
   @@index([raffleId])
 }
 
+model TicketEvent {
+  id          String             @id @default(cuid())
+  slug        String             @unique
+  title       String
+  summary     String?
+  description String?
+  startsAt    DateTime?
+  endsAt      DateTime?
+  venue       String?
+  address     String?
+  city        String?
+  country     String?
+  bannerUrl   String?
+  bannerKey   String?
+  status      TicketEventStatus  @default(DRAFT)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  ticketTypes TicketType[]
+  issues      TicketIssue[]
+  tickets     Ticket[]
+
+  @@index([status])
+  @@index([startsAt])
+}
+
+model TicketType {
+  id             String            @id @default(cuid())
+  eventId        String
+  event          TicketEvent       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  name           String
+  description    String?
+  priceCents     Int
+  currency       String            @default("PEN")
+  totalQuantity  Int
+  perOrderLimit  Int?
+  saleStartsAt   DateTime?
+  saleEndsAt     DateTime?
+  validFrom      DateTime?
+  validUntil     DateTime?
+  status         TicketTypeStatus  @default(DRAFT)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  tickets        Ticket[]
+  issues         TicketIssue[]
+
+  @@index([eventId, status])
+}
+
+model TicketIssue {
+  id             String             @id @default(cuid())
+  eventId        String
+  event          TicketEvent        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  ticketTypeId   String?
+  ticketType     TicketType?        @relation(fields: [ticketTypeId], references: [id])
+  purchaserName  String
+  purchaserEmail String
+  purchaserPhone String?
+  quantity       Int
+  note           String?
+  status         TicketIssueStatus  @default(PENDING)
+  sentAt         DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  tickets        Ticket[]
+
+  @@index([eventId])
+  @@index([ticketTypeId])
+}
+
+model Ticket {
+  id            String        @id @default(cuid())
+  eventId       String
+  event         TicketEvent   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  ticketTypeId  String?
+  ticketType    TicketType?   @relation(fields: [ticketTypeId], references: [id])
+  issueId       String?
+  issue         TicketIssue?  @relation(fields: [issueId], references: [id])
+  sequence      Int?
+  code          String        @unique
+  qrPayload     String
+  ownerName     String
+  ownerEmail    String
+  status        TicketStatus  @default(CREATED)
+  sentAt        DateTime?
+  validatedAt   DateTime?
+  validatedById String?
+  validatedBy   User?         @relation("TicketValidatedBy", fields: [validatedById], references: [id])
+  metadata      Json?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  scans         TicketScan[]
+
+  @@index([eventId, status])
+  @@index([ticketTypeId])
+  @@index([issueId])
+}
+
+model TicketScan {
+  id          String            @id @default(cuid())
+  ticketId    String
+  ticket      Ticket            @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  result      TicketScanResult
+  notes       String?
+  location    String?
+  device      String?
+  scannedById String?
+  scannedBy   User?             @relation("TicketScanBy", fields: [scannedById], references: [id])
+  createdAt   DateTime          @default(now())
+
+  @@index([ticketId])
+  @@index([scannedById])
+}
+
 enum SurveyStatus {
   DRAFT
   PUBLISHED
@@ -228,4 +347,36 @@ enum UserRole {
   DJ
   ADMIN
   PATRON
+}
+
+enum TicketEventStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum TicketTypeStatus {
+  DRAFT
+  ON_SALE
+  ARCHIVED
+}
+
+enum TicketIssueStatus {
+  PENDING
+  SENT
+  CANCELLED
+}
+
+enum TicketStatus {
+  CREATED
+  SENT
+  REDEEMED
+  CANCELLED
+}
+
+enum TicketScanResult {
+  ACCEPTED
+  DUPLICATE
+  CANCELLED
+  INVALID
 }

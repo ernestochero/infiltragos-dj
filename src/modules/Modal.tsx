@@ -7,6 +7,8 @@ interface ModalProps {
   onClose: () => void;
   children: React.ReactNode;
   titleId?: string;
+  closeOnBackdrop?: boolean;
+  showCloseButton?: boolean;
 }
 
 export default function Modal({
@@ -14,6 +16,8 @@ export default function Modal({
   onClose,
   children,
   titleId,
+  closeOnBackdrop = true,
+  showCloseButton = true,
 }: ModalProps) {
   const boxRef = useRef<HTMLDivElement>(null);
 
@@ -64,7 +68,7 @@ export default function Modal({
       <div
         className="fixed inset-0 grid place-items-center p-4"
         onClick={(e) => {
-          if (e.target === e.currentTarget) onClose();
+          if (closeOnBackdrop && e.target === e.currentTarget) onClose();
         }}
       >
         <div
@@ -74,28 +78,16 @@ export default function Modal({
           aria-labelledby={titleId}
           className="relative w-full max-w-md rounded-lg bg-slate-900 text-white p-4 shadow-lg"
         >
-          <button
-            type="button"
-            aria-label="Cerrar"
-            onClick={onClose}
-            className="absolute top-2 right-2 rounded-md text-slate-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-slate-500"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 20 20"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
+          {showCloseButton && (
+            <button
+              type="button"
+              aria-label="Cerrar"
+              onClick={onClose}
+              className="absolute top-2 right-2 rounded-md px-2 py-1 text-xs font-semibold text-slate-200 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-slate-500"
             >
-              <line x1="4" y1="4" x2="16" y2="16" />
-              <line x1="16" y1="4" x2="4" y2="16" />
-            </svg>
-          </button>
+              Cerrar
+            </button>
+          )}
           {children}
         </div>
       </div>

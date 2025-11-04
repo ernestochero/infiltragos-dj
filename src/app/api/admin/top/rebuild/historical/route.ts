@@ -7,7 +7,7 @@ import {
 } from "@dj/lib/top";
 import { syncHistoricalPlaylist } from "@dj/lib/spotifySync";
 
-const CRON_SECRET = process.env.CRON_TOP_SECRET ?? process.env.CRON_SECRET;
+const CRON_SECRET = process.env.CRON_SECRET;
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
