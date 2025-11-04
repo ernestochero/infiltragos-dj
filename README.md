@@ -74,7 +74,7 @@ The ticketing workflow lives under `src/modules/ticket` and is mounted at `/tick
 - `/tickets/new` formulario de creación con upload a S3.
 - `/tickets/[id]` dashboard del evento (tipos de ticket, envíos manuales, historial).
 - `/tickets/scanner` lector con cámara + ingreso manual.
-- Público: `/events/[slug]` muestra la ficha del evento publicado, sus tipos de ticket y permite simular el pago (Niubiz). Tras el "pago" se generan los QR, se envían por correo y el usuario puede descargarlos como PNG con el diseño solicitado.
+- Público: `/events/[slug]` muestra la ficha del evento publicado, sus tipos de ticket y permite simular el pago (Izipay). Tras el "pago" se generan los QR, se envían por correo y el usuario puede descargarlos como PNG con el diseño solicitado.
 - API admin (`x-admin-token: DJ_ADMIN_TOKEN` o sesión ADMIN):
   - `GET/POST /api/admin/tickets/events`
   - `GET/PUT /api/admin/tickets/events/:eventId`

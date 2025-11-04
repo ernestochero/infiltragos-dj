@@ -135,7 +135,7 @@ export default function PublicPurchaseForm({ slug, ticketTypes }: Props) {
         <div>
           <p className="text-sm font-semibold text-gray-100">Compra tus entradas</p>
           <p className="text-xs text-gray-400">
-            El pago se procesa con Niubiz. Por ahora simulamos el cobro para probar el flujo.
+            El pago se procesa con Izipay. Por ahora simulamos el cobro para probar el flujo.
           </p>
         </div>
 
@@ -230,9 +230,9 @@ export default function PublicPurchaseForm({ slug, ticketTypes }: Props) {
         <button
           type="submit"
           disabled={loading || !selectedType || maxQuantity === 0}
-          className="w-full rounded-md bg-[linear-gradient(120deg,#101dff,#9333ea)] px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-md bg-[linear-gradient(120deg,#ed1c24,#f7931e)] px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-[rgba(237,28,36,0.35)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {loading ? 'Procesando…' : 'Pagar con Niubiz'}
+          {loading ? 'Procesando…' : 'Pagar con Izipay'}
         </button>
         </form>
       )}
@@ -286,7 +286,7 @@ export default function PublicPurchaseForm({ slug, ticketTypes }: Props) {
             <button
               type="button"
               onClick={resetForm}
-              className="rounded-md bg-[linear-gradient(120deg,#101dff,#9333ea)] px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 transition hover:opacity-90"
+              className="rounded-md bg-[linear-gradient(120deg,#ed1c24,#f7931e)] px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-[rgba(237,28,36,0.35)] transition hover:opacity-95"
             >
               Comprar más entradas
             </button>
