@@ -100,20 +100,6 @@ function EventGrid({ events }: { events: EventCard[] }) {
                 </p>
               )}
             </div>
-
-            <div className="grid gap-3 rounded-2xl border border-white/10 bg-slate-900/60 p-4 text-xs text-slate-200 sm:grid-cols-2">
-              <DetailItem label="Fecha" value={formatDetailedDate(event.startsAt)} />
-              <DetailItem label="Hora" value={formatTime(event.startsAt)} />
-              <DetailItem label="Lugar" value={event.venue ?? 'Por confirmar'} />
-              <DetailItem
-                label="Ubicación"
-                value={formatLocation({
-                  address: event.address,
-                  city: event.city,
-                  country: event.country,
-                })}
-              />
-            </div>
           </div>
         </Link>
       ))}
@@ -130,15 +116,6 @@ function SectionTitle({ children }: { children: ReactNode }) {
   );
 }
 
-function DetailItem({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <span className="block text-[11px] uppercase tracking-wide text-slate-400">{label}</span>
-      <span className="text-base font-semibold text-slate-100">{value}</span>
-    </div>
-  );
-}
-
 function formatDate(value?: Date | string | null) {
   if (!value) return 'Próximamente';
   const date = typeof value === 'string' ? new Date(value) : value;
@@ -149,42 +126,4 @@ function formatDate(value?: Date | string | null) {
     year: 'numeric',
     timeZone: 'America/Lima',
   });
-}
-
-function formatDetailedDate(value?: Date | string | null) {
-  if (!value) return 'Por confirmar';
-  const date = typeof value === 'string' ? new Date(value) : value;
-  if (Number.isNaN(date.getTime())) return 'Por confirmar';
-  return date.toLocaleDateString('es-PE', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'America/Lima',
-  });
-}
-
-function formatTime(value?: Date | string | null) {
-  if (!value) return 'Por confirmar';
-  const date = typeof value === 'string' ? new Date(value) : value;
-  if (Number.isNaN(date.getTime())) return 'Por confirmar';
-  return date.toLocaleTimeString('es-PE', {
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'America/Lima',
-  });
-}
-
-function formatLocation({
-  address,
-  city,
-  country,
-}: {
-  address?: string | null;
-  city?: string | null;
-  country?: string | null;
-}) {
-  const pieces = [address, city, country].filter(Boolean);
-  if (!pieces.length) return 'Por confirmar';
-  return pieces.join(', ');
 }
