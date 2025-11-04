@@ -74,7 +74,7 @@ The ticketing workflow lives under `src/modules/ticket` and is mounted at `/tick
 - `/tickets/new` formulario de creación con upload a S3.
 - `/tickets/[id]` dashboard del evento (tipos de ticket, envíos manuales, historial).
 - `/tickets/scanner` lector con cámara + ingreso manual.
-- Público: `/events/[slug]` muestra la ficha del evento publicado, sus tipos de ticket y permite simular el pago (Izipay). Tras el "pago" se generan los QR, se envían por correo y el usuario puede descargarlos como PNG con el diseño solicitado.
+- Público: `/events/[slug]` muestra la ficha del evento publicado, sus tipos de ticket y permite pagar con Izipay (modal Smartform). Tras un pago exitoso se generan los QR, se envían por correo y el usuario puede descargarlos como PNG con el diseño solicitado.
 - API admin (`x-admin-token: DJ_ADMIN_TOKEN` o sesión ADMIN):
   - `GET/POST /api/admin/tickets/events`
   - `GET/PUT /api/admin/tickets/events/:eventId`
@@ -90,6 +90,26 @@ The ticketing workflow lives under `src/modules/ticket` and is mounted at `/tick
 1. **S3**: define `TICKET_S3_BUCKET`, `TICKET_S3_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` (opcional `TICKET_S3_PREFIX`) para subir banners.
 2. **Correo SMTP** (opcional pero recomendado): `TICKET_EMAIL_FROM`, `TICKET_SMTP_HOST`, `TICKET_SMTP_PORT`, `TICKET_SMTP_USER`, `TICKET_SMTP_PASS` y `TICKET_EMAIL_REPLY_TO`. Si faltan datos, el envío se omite pero la emisión se registra.
 3. Ajusta `NEXT_PUBLIC_APP_URL` para que los QR apunten a tu dominio (se usa en el payload).
+
+### Pagos con Izipay Smartform
+
+La compra pública de tickets usa el modal **Izipay Smartform** (REST API V4.0 + SDK JS).
+
+1. Configura las variables obligatorias:
+   - `IZIPAY_SITE_ID`
+   - `IZIPAY_API_PASSWORD`
+   - `IZIPAY_SHA_KEY`
+   - `IZIPAY_PUBLIC_KEY`
+   - Opcionales para entornos alternos: `IZIPAY_API_ENDPOINT`, `IZIPAY_JS_URL`.
+2. Expón el webhook en `/webhook-izipay` y regístralo en Backoffice. El handler valida la firma SHA‑256 (`kr-hash`) y marca la orden como pagada/declinada.
+3. Flujo público:
+   - `POST /api/events/:slug/checkout` → crea la orden, registra `TicketPayment` y devuelve `formToken`, `orderCode`, `publicKey` y `scriptUrl`.
+   - El frontend carga `kr-payment-form.min.js`, abre el modal (`KR.renderElements`) y escucha los eventos `krPaymentSuccess` / `krPaymentError`.
+   - Al recibir éxito se llama `POST /api/events/:slug/checkout/finalize` con `{ orderCode, providerStatus, transactionUuid, answer }`. El backend vuelve a validar estado y, si procede, emite los tickets (`issueTickets`) y responde con los QR listos.
+   - Opcional: `GET /api/events/:slug/checkout/status?orderCode=...` para consultar el estado si el usuario refresca o cierra la ventana.
+4. Webhook `POST /webhook-izipay` recibe `kr-answer`, valida la firma y reutiliza la misma lógica de finalización para mantener el estado sincronizado con Izipay aunque el cliente se desconecte.
+
+Logs y metadatos de cada intento quedan en la tabla `TicketPayment` (`status`, `providerStatus`, `transactionUuid`, `rawResponse`, `lastError`). Cuando el estado llega a `FULFILLED` se enlaza la emisión (`TicketIssue`) y se disparan los correos habituales.
 
 ## Contests (Public Voting)
 

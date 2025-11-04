@@ -224,6 +224,7 @@ model TicketEvent {
   ticketTypes TicketType[]
   issues      TicketIssue[]
   tickets     Ticket[]
+  payments    TicketPayment[]
 
   @@index([status])
   @@index([startsAt])
@@ -249,6 +250,7 @@ model TicketType {
 
   tickets        Ticket[]
   issues         TicketIssue[]
+  payments       TicketPayment[]
 
   @@index([eventId, status])
 }
@@ -270,8 +272,38 @@ model TicketIssue {
   updatedAt      DateTime           @updatedAt
 
   tickets        Ticket[]
+  payment        TicketPayment?
 
   @@index([eventId])
+  @@index([ticketTypeId])
+}
+
+model TicketPayment {
+  id             String              @id @default(cuid())
+  eventId        String
+  event          TicketEvent         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  ticketTypeId   String?
+  ticketType     TicketType?         @relation(fields: [ticketTypeId], references: [id])
+  issueId        String?             @unique
+  issue          TicketIssue?        @relation(fields: [issueId], references: [id])
+  quantity       Int
+  amountCents    Int
+  currency       String              @default("PEN")
+  buyerName      String
+  buyerEmail     String
+  buyerPhone     String?
+  orderCode      String              @unique
+  formToken      String?
+  transactionUuid String?
+  providerStatus String?
+  providerMessage String?
+  rawResponse    Json?
+  status         TicketPaymentStatus @default(PENDING)
+  lastError      String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@index([eventId, status])
   @@index([ticketTypeId])
 }
 
@@ -365,6 +397,16 @@ enum TicketIssueStatus {
   PENDING
   SENT
   CANCELLED
+}
+
+enum TicketPaymentStatus {
+  PENDING
+  FORM_READY
+  PAID
+  DECLINED
+  CANCELLED
+  ERROR
+  FULFILLED
 }
 
 enum TicketStatus {
