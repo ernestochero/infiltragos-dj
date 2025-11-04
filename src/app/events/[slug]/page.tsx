@@ -23,9 +23,15 @@ export default async function PublicEventPage({ params }: { params: Params }) {
     description: data.event.description,
     bannerUrl: data.event.bannerUrl,
     startsAt: data.event.startsAt ? data.event.startsAt.toISOString() : null,
+    endsAt: data.event.endsAt ? data.event.endsAt.toISOString() : null,
     venue: data.event.venue,
     address: data.event.address,
+    city: data.event.city,
+    country: data.event.country,
   };
+
+  const referenceDate = data.event.endsAt ?? data.event.startsAt;
+  const isPastEvent = referenceDate ? referenceDate.getTime() < Date.now() : false;
 
   return (
     <main className="min-h-screen bg-slate-950 text-white">
@@ -49,7 +55,7 @@ export default async function PublicEventPage({ params }: { params: Params }) {
             <InfoField label="Lugar" value={eventInfo.venue || 'Por confirmar'} />
             <InfoField
               label="Dirección"
-              value={eventInfo.address || 'Por confirmar'}
+              value={formatLocation(eventInfo.address, eventInfo.city, eventInfo.country)}
             />
           </div>
           {eventInfo.description && (
@@ -57,7 +63,7 @@ export default async function PublicEventPage({ params }: { params: Params }) {
           )}
         </div>
 
-        <PublicPurchaseForm slug={params.slug} ticketTypes={ticketTypes} />
+        <PublicPurchaseForm slug={params.slug} ticketTypes={ticketTypes} isPastEvent={isPastEvent} />
       </div>
     </main>
   );
@@ -83,4 +89,10 @@ function formatDate(value?: string | null) {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+function formatLocation(address?: string | null, city?: string | null, country?: string | null) {
+  const parts = [address, city, country].filter(Boolean);
+  if (parts.length === 0) return 'Por confirmar';
+  return parts.join(', ');
 }

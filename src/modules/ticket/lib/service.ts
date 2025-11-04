@@ -34,6 +34,7 @@ export type PublicTicketType = TicketTypeWithCounts & {
 };
 
 export type TicketEventListItem = Awaited<ReturnType<typeof listEvents>>[number];
+export type PublicEventListItem = Awaited<ReturnType<typeof listPublicEvents>>[number];
 
 const QR_BASE = APP_BASE_URL.replace(/\/$/, '');
 
@@ -169,6 +170,51 @@ export async function listEvents() {
       sent: statusMap.get(event.id)?.[TicketStatus.SENT] ?? 0,
       created: statusMap.get(event.id)?.[TicketStatus.CREATED] ?? 0,
       cancelled: statusMap.get(event.id)?.[TicketStatus.CANCELLED] ?? 0,
+    },
+  }));
+}
+
+export async function listPublicEvents() {
+  const events = await prisma.ticketEvent.findMany({
+    where: { status: TicketEventStatus.PUBLISHED },
+    orderBy: [
+      { startsAt: 'asc' },
+      { createdAt: 'desc' },
+    ],
+    include: {
+      _count: {
+        select: {
+          ticketTypes: true,
+          tickets: true,
+        },
+      },
+    },
+  });
+
+  if (!events.length) return [];
+
+  const ticketStatuses = await prisma.ticket.groupBy({
+    by: ['eventId', 'status'],
+    where: { eventId: { in: events.map((event) => event.id) } },
+    _count: { _all: true },
+  });
+
+  const statusMap = new Map<string, Partial<Record<TicketStatus, number>>>();
+  ticketStatuses.forEach((row) => {
+    const current = statusMap.get(row.eventId) ?? {};
+    current[row.status as TicketStatus] = row._count._all;
+    statusMap.set(row.eventId, current);
+  });
+
+  return events.map(({ _count, ...event }) => ({
+    ...event,
+    stats: {
+      ticketTypes: _count.ticketTypes,
+      totalTickets: _count.tickets,
+      redeemed: statusMap.get(event.id)?.[TicketStatus.REDEEMED] ?? 0,
+      pending:
+        (statusMap.get(event.id)?.[TicketStatus.CREATED] ?? 0) +
+        (statusMap.get(event.id)?.[TicketStatus.SENT] ?? 0),
     },
   }));
 }
