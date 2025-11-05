@@ -142,8 +142,10 @@ export default function PublicPurchaseForm({ slug, ticketTypes, isPastEvent = fa
   const maxQuantity = selectedType ? Math.max(selectedType.available, 0) : 0;
 
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
+      isPollingRef.current = false;
       if (statusPollTimeoutRef.current) {
         clearTimeout(statusPollTimeoutRef.current);
         statusPollTimeoutRef.current = null;
@@ -165,6 +167,7 @@ export default function PublicPurchaseForm({ slug, ticketTypes, isPastEvent = fa
         if (!isMountedRef.current) return;
 
         try {
+          console.info('[checkout status poll] tick', orderCode, new Date().toISOString());
           const response = await fetch(
             `/api/events/${slug}/checkout/status?orderCode=${encodeURIComponent(orderCode)}`,
             {
@@ -597,7 +600,6 @@ export default function PublicPurchaseForm({ slug, ticketTypes, isPastEvent = fa
                       event={result.event}
                       ticketType={result.ticketType}
                       buyerName={result.buyerName}
-                      width={640}
                     />
                   </div>
                 )}

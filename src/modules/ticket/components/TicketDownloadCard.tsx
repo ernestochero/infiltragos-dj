@@ -35,7 +35,7 @@ export default function TicketDownloadCard({
   className = '',
   hideDownloadButton = false,
   refCallback,
-  width = 640,
+  width,
 }: Props) {
   const [qr, setQr] = useState<string>('');
   const cardRef = useRef<HTMLDivElement>(null);
@@ -68,13 +68,13 @@ export default function TicketDownloadCard({
 
   return (
     <div
-      className={`rounded-2xl border border-white/10 bg-white/90 p-4 text-slate-900 shadow-lg ${className}`}
-      style={{ width }}
+      className={`w-full rounded-2xl border border-white/10 bg-white/90 p-4 text-slate-900 shadow-lg ${className}`}
+      style={width ? { width } : undefined}
     >
       <div
         ref={cardRef}
-        className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-4 md:flex-row"
-        style={{ width: width - 32 }}
+        className="flex w-full flex-col gap-4 rounded-xl border border-slate-200 bg-white p-4 md:flex-row"
+        style={width ? { width: width - 32 } : undefined}
       >
         <div className="flex flex-col items-center justify-between border-r border-dashed border-slate-300 pr-4 text-center">
           <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Ticket Único</div>
