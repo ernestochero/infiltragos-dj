@@ -123,7 +123,9 @@ export default function PublicPurchaseForm({ slug, ticketTypes, isPastEvent = fa
   const [paymentStatus, setPaymentStatus] = useState<TicketPaymentStatus | null>(null);
   const orderRef = useRef<CheckoutInitResponse | null>(null);
   const finalizingRef = useRef(false);
-  const smartformContainerRef = useRef<HTMLDivElement | null>(null);
+  const statusPollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isMountedRef = useRef(true);
+  const isPollingRef = useRef(false);
   const smartformTargetRef = useRef<HTMLDivElement | null>(null);
   const publicKeyRef = useRef<string | null>(null);
   const isPast = Boolean(isPastEvent);
@@ -138,6 +140,83 @@ export default function PublicPurchaseForm({ slug, ticketTypes, isPastEvent = fa
   );
 
   const maxQuantity = selectedType ? Math.max(selectedType.available, 0) : 0;
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      if (statusPollTimeoutRef.current) {
+        clearTimeout(statusPollTimeoutRef.current);
+        statusPollTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
+  const startStatusPolling = useCallback(
+    (orderCode: string) => {
+      if (!orderCode) return;
+      if (isPollingRef.current) {
+        console.info('[Izipay] poll already running for', orderCode);
+        return;
+      }
+      console.info('[Izipay] starting status polling', orderCode);
+      isPollingRef.current = true;
+
+      const poll = async () => {
+        if (!isMountedRef.current) return;
+
+        try {
+          const response = await fetch(
+            `/api/events/${slug}/checkout/status?orderCode=${encodeURIComponent(orderCode)}`,
+            {
+              method: 'GET',
+              headers: { Accept: 'application/json' },
+              cache: 'no-store',
+            },
+          );
+
+          if (response.ok) {
+            const data = (await response.json()) as FinalizeResponse;
+            setPaymentStatus(data.paymentStatus);
+            if (data.result && data.paymentStatus === 'FULFILLED') {
+              const fallbackBuyerName = orderRef.current?.buyer.name;
+              setResult({
+                ...data.result,
+                buyerName: data.result.buyerName || fallbackBuyerName || data.result.buyerName,
+              });
+              setShowTicketsInline(true);
+              setExpandedTicket(null);
+              setError(null);
+              setCurrentOrder(null);
+              orderRef.current = null;
+              window.KR?.closePopin?.();
+              window.__IZIPAY_POPIN_OPEN__ = false;
+              isPollingRef.current = false;
+              if (statusPollTimeoutRef.current) {
+                clearTimeout(statusPollTimeoutRef.current);
+                statusPollTimeoutRef.current = null;
+              }
+              return;
+            }
+          }
+        } catch (err) {
+          console.error('[checkout status poll] failed', err);
+        }
+
+        statusPollTimeoutRef.current = setTimeout(() => {
+          poll();
+        }, 2000);
+      };
+
+      poll();
+    },
+    [slug],
+  );
+
+  useEffect(() => {
+    if (!result && orderRef.current && paymentStatus && (paymentStatus === 'PAID' || paymentStatus === 'FULFILLED')) {
+      startStatusPolling(orderRef.current.orderCode);
+    }
+  }, [paymentStatus, result, startStatusPolling]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -187,6 +266,7 @@ export default function PublicPurchaseForm({ slug, ticketTypes, isPastEvent = fa
       orderRef.current = init;
       publicKeyRef.current = init.publicKey;
       setPaymentStatus('FORM_READY');
+      startStatusPolling(init.orderCode);
       await initializeSmartform(init);
     } catch (err) {
       console.error(err);
@@ -213,6 +293,7 @@ export default function PublicPurchaseForm({ slug, ticketTypes, isPastEvent = fa
 
   const handleSmartformSuccess = useCallback(
     async (event: Event) => {
+      console.info('[Izipay] payment success event', event);
       const detail = extractSmartformDetail(event);
       const order = orderRef.current;
       if (!order || finalizingRef.current) return;
@@ -260,16 +341,20 @@ export default function PublicPurchaseForm({ slug, ticketTypes, isPastEvent = fa
               ? 'Pago recibido. Estamos generando tus tickets, te enviaremos un correo en breve.'
               : data.message || 'Tu pago está en revisión.',
           );
+          startStatusPolling(finalizePayload.orderCode);
         }
       } catch (err) {
         console.error('[Smartform success handler] finalize error', err);
         setError(err instanceof Error ? err.message : 'No pudimos finalizar el pago.');
+        if (order?.orderCode) {
+          startStatusPolling(order.orderCode);
+        }
       } finally {
         finalizingRef.current = false;
         setLoading(false);
       }
     },
-    [slug, ticketTypes, selectedType],
+    [slug, ticketTypes, selectedType, startStatusPolling],
   );
 
   const finalizeDeclined = useCallback(
@@ -296,6 +381,7 @@ export default function PublicPurchaseForm({ slug, ticketTypes, isPastEvent = fa
 
   const handleSmartformError = useCallback(
     (event: Event) => {
+      console.warn('[Izipay] payment error event', event);
       const detail = extractSmartformDetail(event);
       console.error('[Smartform error]', detail);
       finalizingRef.current = false;
@@ -321,6 +407,9 @@ export default function PublicPurchaseForm({ slug, ticketTypes, isPastEvent = fa
     const errorListener = (event: Event) => handleSmartformError(event);
     const popinCloseListener = () => {
       window.__IZIPAY_POPIN_OPEN__ = false;
+      if (!result && orderRef.current) {
+        startStatusPolling(orderRef.current.orderCode);
+      }
     };
 
     document.addEventListener('kr-payment-success', successListener as EventListener);
@@ -338,7 +427,7 @@ export default function PublicPurchaseForm({ slug, ticketTypes, isPastEvent = fa
       document.removeEventListener('kr-payment-failure', errorListener as EventListener);
       document.removeEventListener('kr-popin-close', popinCloseListener);
     };
-  }, [handleSmartformSuccess, handleSmartformError]);
+  }, [handleSmartformSuccess, handleSmartformError, result, startStatusPolling]);
 
   return (
     <div className="space-y-4">
@@ -576,6 +665,11 @@ export default function PublicPurchaseForm({ slug, ticketTypes, isPastEvent = fa
     setSelectedTypeId(ticketTypes[0]?.id ?? '');
     window.KR?.closePopin?.();
     window.__IZIPAY_POPIN_OPEN__ = false;
+    if (statusPollTimeoutRef.current) {
+      clearTimeout(statusPollTimeoutRef.current);
+      statusPollTimeoutRef.current = null;
+    }
+    isPollingRef.current = false;
   }
 
   async function initializeSmartform(order: CheckoutInitResponse) {
@@ -608,10 +702,12 @@ export default function PublicPurchaseForm({ slug, ticketTypes, isPastEvent = fa
     }
 
     try {
+      console.info('[Izipay] invoking openPopin');
       KR.openPopin?.();
       window.__IZIPAY_POPIN_OPEN__ = true;
+      console.info('[Izipay] popin opened');
     } catch (error) {
-      console.warn('[Izipay] openPopin failed', error);
+      console.error('[Izipay] openPopin failed', error);
     }
   }
 
@@ -665,30 +761,15 @@ export default function PublicPurchaseForm({ slug, ticketTypes, isPastEvent = fa
   }
 
   function ensureSmartformTarget() {
-    let host = smartformContainerRef.current;
-    if (!host) {
-      host = document.createElement('div');
-      host.id = 'izipay-smartform-root';
-      host.style.position = 'fixed';
-      host.style.top = '-9999px';
-      host.style.left = '-9999px';
-      host.style.width = '0';
-      host.style.height = '0';
-      host.setAttribute('aria-hidden', 'true');
-      document.body?.appendChild(host);
-      smartformContainerRef.current = host;
-    }
-
     let target = smartformTargetRef.current;
-    if (!target || !host.contains(target)) {
+    if (!target || !document.body.contains(target)) {
       target = document.createElement('div');
+      target.id = `kr-smartform-${Date.now()}`;
       target.className = 'kr-smart-form';
       target.setAttribute('kr-popin', 'true');
-      target.id = target.id || `kr-smartform-${Date.now()}`;
-      host.appendChild(target);
+      document.body.appendChild(target);
       smartformTargetRef.current = target;
     }
-
     return target;
   }
 

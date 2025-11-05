@@ -400,7 +400,9 @@ async function handleSuccessfulPayment(
           id: fulfillment.ticketType?.id ?? payment.ticketTypeId ?? '',
           name: fulfillment.ticketType?.name ?? payment.ticketType?.name ?? 'Ticket',
           priceCents: fulfillment.ticketType?.priceCents ?? payment.ticketType?.priceCents ?? 0,
-          currency: fulfillment.ticketType?.currency ?? payment.ticketType?.currency ?? 'PEN',
+          currency: normalizeCurrency(
+            fulfillment.ticketType?.currency ?? payment.ticketType?.currency ?? null,
+          ),
         },
         buyerName: fulfillment.issue.purchaserName,
       },
@@ -607,7 +609,7 @@ function mapIssueToResult(
       id: payment.ticketType?.id ?? payment.ticketTypeId ?? '',
       name: payment.ticketType?.name ?? 'Ticket',
       priceCents: payment.ticketType?.priceCents ?? 0,
-      currency: payment.ticketType?.currency ?? 'PEN',
+      currency: normalizeCurrency(payment.ticketType?.currency ?? null),
     },
     buyerName: payment.buyerName,
   };

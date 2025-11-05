@@ -1,5 +1,5 @@
 export const IZIPAY_API_ENDPOINT =
-  process.env.IZIPAY_API_ENDPOINT || 'https://secure.micuentaweb.pe/api-payment';
+  process.env.IZIPAY_API_ENDPOINT || 'https://api.micuentaweb.pe/api-payment';
 
 export const IZIPAY_JS_URL =
   process.env.IZIPAY_JS_URL ||

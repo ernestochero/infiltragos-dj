@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ensureIzipayCredentials } from '@payment/izipay/config';
-import { verifyIzipaySignature } from '@payment/izipay/signature';
+import { verifyIzipaySignature, computeIzipaySignature } from '@payment/izipay/signature';
 import { refreshPaymentStatus, extractOrderCode } from '@ticket/lib/payments';
 
 function parseBody(raw: string) {
@@ -59,8 +59,20 @@ export async function POST(req: NextRequest) {
     req.headers.get('x-kr-hash') ??
     req.headers.get('kr-hash');
 
-  if (!verifyIzipaySignature(answerRaw, signature)) {
-    console.warn('[izipay:webhook] firma inválida');
+  const hashKey = typeof body['kr-hash-key'] === 'string' && body['kr-hash-key'].length > 0
+    ? body['kr-hash-key']
+    : undefined;
+
+  if (!verifyIzipaySignature(answerRaw, signature, hashKey)) {
+    const expected = computeIzipaySignature(answerRaw, hashKey);
+    console.warn('[izipay:webhook] firma inválida', {
+      received: signature,
+      expected,
+      hasSignature: Boolean(signature),
+      answerRaw,
+      rawBody,
+      hashKey,
+    });
     return NextResponse.json({ error: 'INVALID_SIGNATURE' }, { status: 400 });
   }
 
