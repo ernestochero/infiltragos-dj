@@ -22,7 +22,7 @@ CREATE TABLE "TicketPayment" (
     "status" "TicketPaymentStatus" NOT NULL DEFAULT 'PENDING',
     "lastError" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "TicketPayment_pkey" PRIMARY KEY ("id")
 );
