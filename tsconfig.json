@@ -36,6 +36,9 @@
       ],
       "@ticket/*": [
         "./src/modules/ticket/*"
+      ],
+      "@payment/*": [
+        "./src/modules/payment/*"
       ]
     },
     "incremental": true,
