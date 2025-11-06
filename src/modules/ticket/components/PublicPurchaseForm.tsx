@@ -933,7 +933,7 @@ export default function PublicPurchaseForm({
       const link = document.createElement('link');
       link.rel = 'stylesheet';
       link.href = href;
-      link.dataset.izipaySmartformStyle = 'true';
+      link.setAttribute('data-izipay-smartform-style', 'true');
       link.addEventListener('load', () => {
         link.dataset.loaded = 'true';
         resolve();
