@@ -46,7 +46,7 @@ function removeEmpty<T extends Record<string, unknown>>(input: T): T {
       cleaned[key] = filtered;
       continue;
     }
-    if (typeof value === 'object' && value && !(value instanceof Date)) {
+    if (typeof value === 'object' && value !== null && !(value instanceof Date)) {
       const nested = removeEmpty(value as Record<string, unknown>);
       if (Object.keys(nested).length === 0) continue;
       cleaned[key] = nested;
