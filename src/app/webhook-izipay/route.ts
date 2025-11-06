@@ -59,8 +59,9 @@ export async function POST(req: NextRequest) {
     req.headers.get('x-kr-hash') ??
     req.headers.get('kr-hash');
 
-  const hashKey = typeof body['kr-hash-key'] === 'string' && body['kr-hash-key'].length > 0
-    ? body['kr-hash-key']
+  const hashKeyValue = body['kr-hash-key'];
+  const hashKey = typeof hashKeyValue === 'string' && hashKeyValue.length > 0
+    ? hashKeyValue
     : undefined;
 
   if (!verifyIzipaySignature(answerRaw, signature, hashKey)) {
