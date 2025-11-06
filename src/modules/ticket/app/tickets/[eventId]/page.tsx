@@ -19,6 +19,10 @@ type TicketTypeItem = {
   totalQuantity: number;
   status: 'DRAFT' | 'ON_SALE' | 'ARCHIVED';
   saleEndsAt?: string | null;
+  saleStartsAt?: string | null;
+  perOrderLimit?: number | null;
+  validFrom?: string | null;
+  validUntil?: string | null;
   _count: {
     tickets: number;
     issues: number;
@@ -126,6 +130,7 @@ export default function TicketEventDetailPage({ params }: { params: { eventId: s
   const [editingDetails, setEditingDetails] = useState(false);
   const [showTypeModal, setShowTypeModal] = useState(false);
   const [showIssueModal, setShowIssueModal] = useState(false);
+  const [editingType, setEditingType] = useState<TicketTypeItem | null>(null);
   
   const refresh = async () => {
     setLoading(true);
@@ -422,17 +427,26 @@ export default function TicketEventDetailPage({ params }: { params: { eventId: s
                           <p className="text-sm text-gray-300">{type.description}</p>
                         )}
                       </div>
-                      <span
-                        className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${statusBadges[type.status] || 'border-white/10 bg-white/10 text-gray-100'}`}
-                      >
-                        {type.status === 'ON_SALE'
-                          ? 'En venta'
-                          : type.status === 'DRAFT'
-                          ? 'Borrador'
-                          : 'Archivado'}
-                      </span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${statusBadges[type.status] || 'border-white/10 bg-white/10 text-gray-100'}`}
+                        >
+                          {type.status === 'ON_SALE'
+                            ? 'En venta'
+                            : type.status === 'DRAFT'
+                            ? 'Borrador'
+                            : 'Archivado'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setEditingType(type)}
+                          className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-semibold text-gray-100 hover:bg-white/10"
+                        >
+                          Editar
+                        </button>
+                      </div>
                     </div>
-                    <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                    <div className="mt-3 grid gap-3 sm:grid-cols-4">
                       <div>
                         <p className="text-xs uppercase tracking-wide text-gray-400">Precio</p>
                         <p className="text-sm text-gray-100">
@@ -448,6 +462,14 @@ export default function TicketEventDetailPage({ params }: { params: { eventId: s
                       <div>
                         <p className="text-xs uppercase tracking-wide text-gray-400">Vendidos</p>
                         <p className="text-sm text-gray-100">{type.stats.redeemed}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs uppercase tracking-wide text-gray-400">
+                          Fin de venta
+                        </p>
+                        <p className="text-sm text-gray-100">
+                          {type.saleEndsAt ? formatDateTime(type.saleEndsAt) : 'Sin fecha'}
+                        </p>
                       </div>
                     </div>
                     <div className="mt-3 grid gap-2 sm:grid-cols-4">
@@ -580,6 +602,25 @@ export default function TicketEventDetailPage({ params }: { params: { eventId: s
               }))}
               onIssued={() => {
                 setShowIssueModal(false);
+                void refresh();
+              }}
+            />
+          </div>
+        )}
+      </Modal>
+
+      <Modal open={!!editingType && !!data} onClose={() => setEditingType(null)}>
+        {data && editingType && (
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-gray-100">
+              Editar “{editingType.name}”
+            </h3>
+            <TicketTypeForm
+              eventId={data.event.id}
+              ticketType={editingType}
+              onUpdated={(updated) => {
+                setEditingType(null);
+                setStatusMessage(`Tipo de ticket “${updated.name}” actualizado.`);
                 void refresh();
               }}
             />

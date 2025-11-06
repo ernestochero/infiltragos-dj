@@ -1,23 +1,86 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+
+type TicketTypeEditable = {
+  id: string;
+  name: string;
+  description?: string | null;
+  priceCents: number;
+  currency: string;
+  totalQuantity: number;
+  perOrderLimit?: number | null;
+  saleEndsAt?: string | null;
+  status: 'DRAFT' | 'ON_SALE' | 'ARCHIVED';
+};
 
 type Props = {
   eventId: string;
   onCreated?: () => void;
+  ticketType?: TicketTypeEditable;
+  onUpdated?: (ticketType: TicketTypeEditable) => void;
 };
 
-export default function TicketTypeForm({ eventId, onCreated }: Props) {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [price, setPrice] = useState('0');
-  const [currency, setCurrency] = useState('PEN');
-  const [totalQuantity, setTotalQuantity] = useState(0);
-  const [perOrderLimit, setPerOrderLimit] = useState<number | ''>('');
-  const [status, setStatus] = useState<'DRAFT' | 'ON_SALE' | 'ARCHIVED'>('ON_SALE');
-  const [saleEndsAt, setSaleEndsAt] = useState('');
+function toLocalInput(value?: string | null) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const tzOffsetMs = date.getTimezoneOffset() * 60 * 1000;
+  const local = new Date(date.getTime() - tzOffsetMs);
+  return local.toISOString().slice(0, 16);
+}
+
+export default function TicketTypeForm({ eventId, onCreated, ticketType, onUpdated }: Props) {
+  const isEditing = Boolean(ticketType);
+
+  const initial = useMemo<{
+    name: string;
+    description: string;
+    price: string;
+    currency: string;
+    totalQuantity: number;
+    perOrderLimit: number | '';
+    status: 'DRAFT' | 'ON_SALE' | 'ARCHIVED';
+    saleEndsAt: string;
+  }>(
+    () => ({
+      name: ticketType?.name ?? '',
+      description: ticketType?.description ?? '',
+      price: ticketType ? (ticketType.priceCents / 100).toString() : '0',
+      currency: ticketType?.currency ?? 'PEN',
+      totalQuantity: ticketType?.totalQuantity ?? 0,
+      perOrderLimit:
+        ticketType?.perOrderLimit !== undefined && ticketType?.perOrderLimit !== null
+          ? ticketType.perOrderLimit
+          : '',
+      status: ticketType?.status ?? 'ON_SALE',
+      saleEndsAt: toLocalInput(ticketType?.saleEndsAt),
+    }),
+    [ticketType],
+  );
+
+  const [name, setName] = useState(initial.name);
+  const [description, setDescription] = useState(initial.description);
+  const [price, setPrice] = useState(initial.price);
+  const [currency, setCurrency] = useState(initial.currency);
+  const [totalQuantity, setTotalQuantity] = useState(initial.totalQuantity);
+  const [perOrderLimit, setPerOrderLimit] = useState<number | ''>(initial.perOrderLimit);
+  const [status, setStatus] = useState<'DRAFT' | 'ON_SALE' | 'ARCHIVED'>(initial.status);
+  const [saleEndsAt, setSaleEndsAt] = useState(initial.saleEndsAt);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    setName(initial.name);
+    setDescription(initial.description);
+    setPrice(initial.price);
+    setCurrency(initial.currency);
+    setTotalQuantity(initial.totalQuantity);
+    setPerOrderLimit(initial.perOrderLimit);
+    setStatus(initial.status);
+    setSaleEndsAt(initial.saleEndsAt);
+    setError(null);
+  }, [initial]);
 
   const reset = () => {
     setName('');
@@ -45,26 +108,51 @@ export default function TicketTypeForm({ eventId, onCreated }: Props) {
     try {
       const priceNumber = Number.parseFloat(price || '0');
       const normalizedPrice = Number.isNaN(priceNumber) ? 0 : priceNumber;
-      const res = await fetch(`/api/admin/tickets/events/${eventId}/ticket-types`, {
-        method: 'POST',
+      const payload = {
+        name: name.trim(),
+        description: description || undefined,
+        price: normalizedPrice,
+        currency,
+        totalQuantity,
+        perOrderLimit: perOrderLimit === '' ? undefined : perOrderLimit,
+        saleEndsAt: saleEndsAt ? new Date(saleEndsAt).toISOString() : undefined,
+        status,
+      };
+      const url = isEditing
+        ? `/api/admin/tickets/ticket-types/${ticketType?.id}`
+        : `/api/admin/tickets/events/${eventId}/ticket-types`;
+      const method = isEditing ? 'PUT' : 'POST';
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: name.trim(),
-          description: description || undefined,
-          price: normalizedPrice,
-          currency,
-          totalQuantity,
-          perOrderLimit: perOrderLimit === '' ? undefined : perOrderLimit,
-          saleEndsAt: saleEndsAt ? new Date(saleEndsAt).toISOString() : undefined,
-          status,
-        }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => null);
-        throw new Error(data?.message || 'No se pudo crear el tipo de ticket');
+        throw new Error(data?.message || (isEditing ? 'No se pudo actualizar el tipo de ticket' : 'No se pudo crear el tipo de ticket'));
       }
-      reset();
-      onCreated?.();
+      const json = (await res.json()) as { ticketType?: TicketTypeEditable } | null;
+      if (isEditing) {
+        const updated = json?.ticketType;
+        if (updated) {
+          onUpdated?.(updated);
+        } else {
+          onUpdated?.({
+            ...(ticketType as TicketTypeEditable),
+            name: payload.name,
+            description: payload.description ?? null,
+            priceCents: Math.round(payload.price * 100),
+            currency: payload.currency,
+            totalQuantity: payload.totalQuantity,
+            perOrderLimit: payload.perOrderLimit ?? null,
+            saleEndsAt: payload.saleEndsAt ?? null,
+            status: payload.status ?? (ticketType as TicketTypeEditable).status,
+          });
+        }
+      } else {
+        reset();
+        onCreated?.();
+      }
     } catch (err) {
       console.error(err);
       setError(err instanceof Error ? err.message : 'Error desconocido');
@@ -76,8 +164,14 @@ export default function TicketTypeForm({ eventId, onCreated }: Props) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border border-white/10 bg-black/20 p-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-base font-semibold text-gray-100">Nuevo tipo de ticket</h3>
-        <span className="text-xs text-gray-400">Define cupos y precio.</span>
+        <h3 className="text-base font-semibold text-gray-100">
+          {isEditing ? 'Editar tipo de ticket' : 'Nuevo tipo de ticket'}
+        </h3>
+        <span className="text-xs text-gray-400">
+          {isEditing
+            ? 'Actualiza la información y la ventana de venta.'
+            : 'Define cupos y precio.'}
+        </span>
       </div>
 
       {error && (
@@ -197,7 +291,7 @@ export default function TicketTypeForm({ eventId, onCreated }: Props) {
           disabled={submitting}
           className="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-60"
         >
-          {submitting ? 'Guardando…' : 'Crear tipo'}
+          {submitting ? 'Guardando…' : isEditing ? 'Guardar cambios' : 'Crear tipo'}
         </button>
       </div>
     </form>

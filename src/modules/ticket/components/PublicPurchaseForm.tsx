@@ -135,6 +135,7 @@ export default function PublicPurchaseForm({
   const statusPollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMountedRef = useRef(true);
   const isPollingRef = useRef(false);
+  const activeOrderCodeRef = useRef<string | null>(null);
   const smartformTargetRef = useRef<HTMLDivElement | null>(null);
   const publicKeyRef = useRef<string | null>(null);
   const isPast = Boolean(isPastEvent);
@@ -163,18 +164,113 @@ export default function PublicPurchaseForm({
     };
   }, []);
 
+  const stopStatusPolling = useCallback(() => {
+    if (statusPollTimeoutRef.current) {
+      clearTimeout(statusPollTimeoutRef.current);
+      statusPollTimeoutRef.current = null;
+    }
+    isPollingRef.current = false;
+    activeOrderCodeRef.current = null;
+  }, []);
+
+  const clearCurrentOrder = useCallback(
+    (options?: { resetStatus?: boolean }) => {
+      stopStatusPolling();
+      setCurrentOrder(null);
+      orderRef.current = null;
+      activeOrderCodeRef.current = null;
+      if (options?.resetStatus !== false) {
+        setPaymentStatus(null);
+      }
+    },
+    [stopStatusPolling],
+  );
+
+  const cleanupSmartformArtifacts = useCallback(() => {
+    if (typeof document === 'undefined') return;
+    const global = typeof window !== 'undefined' ? window : undefined;
+    const popinOpen = global?.__IZIPAY_POPIN_OPEN__ === true;
+
+    if (!popinOpen && global?.KR?.removeForms) {
+      try {
+        void Promise.resolve(global.KR.removeForms());
+      } catch (error) {
+        console.warn('[Izipay] removeForms cleanup failed', error);
+      }
+    }
+
+    const target = smartformTargetRef.current;
+    if (target && target.parentElement) {
+      target.parentElement.removeChild(target);
+      smartformTargetRef.current = null;
+    }
+    const orphanSmartforms = document.querySelectorAll<HTMLElement>(
+      '#kr-smartform-wrapper, [id^="kr-smartform"], .kr-smart-form, .kr-detachment-area, .kr-attachment-area, #kr-toolbar, .kr-resource, .kr-smart-button-wrapper, .kr-smartform-modal-wrapper',
+    );
+    orphanSmartforms.forEach((node) => node.remove());
+
+    const strayButtons = document.querySelectorAll<HTMLElement>(
+      '.kr-popin-button, .kr-popin-button-enabled, #kr-popin-button, .kr-smart-form-modal-button',
+    );
+    strayButtons.forEach((node) => {
+      if (!node) return;
+      if (popinOpen) {
+        node.style.setProperty('display', 'none', 'important');
+        node.style.setProperty('visibility', 'hidden', 'important');
+        node.style.setProperty('pointer-events', 'none', 'important');
+      } else {
+        node.remove();
+      }
+    });
+
+    if (!popinOpen) {
+      document.querySelectorAll<HTMLElement>('.kr-popin').forEach((container) => {
+        container.remove();
+      });
+      document.querySelectorAll('script[data-izipay-smartform="true"]').forEach((script) => {
+        script.parentElement?.removeChild(script);
+      });
+      document.querySelectorAll('link[data-izipay-smartform-style="true"]').forEach((link) => {
+        link.parentElement?.removeChild(link);
+      });
+      if (global) {
+        global.KR = undefined;
+        global.__IZIPAY_FORM_RENDERED__ = false;
+        global.__IZIPAY_LOAD_PROMISE__ = undefined;
+        global.__IZIPAY_STYLE_PROMISE__ = undefined;
+      }
+    }
+
+    ensurePopinButtonHidden();
+  }, []);
+
+  const dismissPopin = useCallback(
+    (options?: { clearOrder?: boolean; resetStatus?: boolean }) => {
+      if (typeof window === 'undefined') return;
+      window.__IZIPAY_POPIN_OPEN__ = false;
+      window.KR?.closePopin?.();
+      if (options?.clearOrder !== false) {
+        clearCurrentOrder({ resetStatus: options?.resetStatus });
+      }
+      cleanupSmartformArtifacts();
+    },
+    [cleanupSmartformArtifacts, clearCurrentOrder],
+  );
+
   const startStatusPolling = useCallback(
     (orderCode: string) => {
       if (!orderCode) return;
-      if (isPollingRef.current) {
+      if (isPollingRef.current && activeOrderCodeRef.current === orderCode) {
         console.info('[Izipay] poll already running for', orderCode);
         return;
       }
       console.info('[Izipay] starting status polling', orderCode);
       isPollingRef.current = true;
+      activeOrderCodeRef.current = orderCode;
 
       const poll = async () => {
         if (!isMountedRef.current) return;
+        if (activeOrderCodeRef.current !== orderCode) return;
 
         try {
           console.info('[checkout status poll] tick', orderCode, new Date().toISOString());
@@ -199,15 +295,8 @@ export default function PublicPurchaseForm({
               setShowTicketsInline(true);
               setExpandedTicket(null);
               setError(null);
-              setCurrentOrder(null);
-              orderRef.current = null;
-              window.KR?.closePopin?.();
-              window.__IZIPAY_POPIN_OPEN__ = false;
-              isPollingRef.current = false;
-              if (statusPollTimeoutRef.current) {
-                clearTimeout(statusPollTimeoutRef.current);
-                statusPollTimeoutRef.current = null;
-              }
+              clearCurrentOrder({ resetStatus: false });
+              dismissPopin({ clearOrder: false, resetStatus: false });
               return;
             }
           }
@@ -222,7 +311,7 @@ export default function PublicPurchaseForm({
 
       poll();
     },
-    [slug],
+    [clearCurrentOrder, dismissPopin, slug],
   );
 
   useEffect(() => {
@@ -288,11 +377,8 @@ export default function PublicPurchaseForm({
     } catch (err) {
       console.error(err);
       setError(err instanceof Error ? err.message : 'Error desconocido');
-      setCurrentOrder(null);
-      orderRef.current = null;
-      setPaymentStatus(null);
-      window.KR?.closePopin?.();
-      window.__IZIPAY_POPIN_OPEN__ = false;
+      clearCurrentOrder();
+      dismissPopin({ clearOrder: false });
     } finally {
       setLoading(false);
     }
@@ -305,6 +391,21 @@ export default function PublicPurchaseForm({
   useEffect(() => {
     orderRef.current = currentOrder;
   }, [currentOrder]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    ensurePopinButtonHidden();
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handlePopState = () => dismissPopin();
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      dismissPopin();
+    };
+  }, [dismissPopin]);
 
   const total = selectedType ? (selectedType.priceCents / 100) * quantity : 0;
   const submitLabel = loading
@@ -329,9 +430,6 @@ export default function PublicPurchaseForm({
         if (!finalizePayload.orderCode) {
           throw new Error('No pudimos identificar el pedido confirmado.');
         }
-        if (!finalizePayload.providerStatus) {
-          finalizePayload.providerStatus = 'PAID';
-        }
         const response = await fetch(`/api/events/${slug}/checkout/finalize`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -355,10 +453,8 @@ export default function PublicPurchaseForm({
           setBuyerPhone('');
           setQuantity(1);
           setSelectedTypeId(ticketTypes[0]?.id ?? selectedType?.id ?? '');
-          setCurrentOrder(null);
-          orderRef.current = null;
-          window.KR?.closePopin?.();
-          window.__IZIPAY_POPIN_OPEN__ = false;
+          clearCurrentOrder({ resetStatus: false });
+          dismissPopin({ clearOrder: false, resetStatus: false });
         } else {
           setError(
             data.paymentStatus === 'PAID'
@@ -378,7 +474,7 @@ export default function PublicPurchaseForm({
         setLoading(false);
       }
     },
-    [slug, ticketTypes, selectedType, startStatusPolling],
+    [clearCurrentOrder, dismissPopin, slug, ticketTypes, selectedType, startStatusPolling],
   );
 
   const finalizeDeclined = useCallback(
@@ -418,21 +514,19 @@ export default function PublicPurchaseForm({
           console.warn('[Smartform error] finalizeDeclined failed', err);
         });
       }
-      setCurrentOrder(null);
-      orderRef.current = null;
-      window.KR?.closePopin?.();
-      window.__IZIPAY_POPIN_OPEN__ = false;
+      clearCurrentOrder({ resetStatus: false });
+      dismissPopin({ clearOrder: false, resetStatus: false });
     },
-    [finalizeDeclined],
+    [clearCurrentOrder, dismissPopin, finalizeDeclined],
   );
 
   useEffect(() => {
     const successListener = (event: Event) => handleSmartformSuccess(event);
     const errorListener = (event: Event) => handleSmartformError(event);
     const popinCloseListener = () => {
-      window.__IZIPAY_POPIN_OPEN__ = false;
-      if (!result && orderRef.current) {
-        startStatusPolling(orderRef.current.orderCode);
+      dismissPopin();
+      if (!result) {
+        setError('Pago cancelado. Puedes intentar nuevamente.');
       }
     };
 
@@ -451,7 +545,7 @@ export default function PublicPurchaseForm({
       document.removeEventListener('kr-payment-failure', errorListener as EventListener);
       document.removeEventListener('kr-popin-close', popinCloseListener);
     };
-  }, [handleSmartformSuccess, handleSmartformError, result, startStatusPolling]);
+  }, [dismissPopin, handleSmartformSuccess, handleSmartformError, result]);
 
   return (
     <div className="space-y-4">
@@ -704,13 +798,8 @@ export default function PublicPurchaseForm({
     setBuyerPhone('');
     setQuantity(1);
     setSelectedTypeId(ticketTypes[0]?.id ?? '');
-    window.KR?.closePopin?.();
-    window.__IZIPAY_POPIN_OPEN__ = false;
-    if (statusPollTimeoutRef.current) {
-      clearTimeout(statusPollTimeoutRef.current);
-      statusPollTimeoutRef.current = null;
-    }
-    isPollingRef.current = false;
+    clearCurrentOrder();
+    dismissPopin({ clearOrder: false });
   }
 
   async function initializeSmartform(order: CheckoutInitResponse) {
@@ -819,6 +908,7 @@ export default function PublicPurchaseForm({
     if (typeof document === 'undefined') return;
     const href = cssUrl?.trim();
     if (!href) return;
+    ensurePopinButtonHidden();
     const selector = `link[data-izipay-smartform-style="true"][href="${href}"]`;
     const existing = document.querySelector<HTMLLinkElement>(selector);
     if (existing) {
@@ -865,6 +955,27 @@ export default function PublicPurchaseForm({
     return (event as unknown as { detail?: unknown })?.detail ?? null;
   }
 
+}
+
+function ensurePopinButtonHidden() {
+  if (typeof document === 'undefined') return;
+  let style = document.querySelector<HTMLStyleElement>('style[data-izipay-hide-popin-button="true"]');
+  if (!style) {
+    style = document.createElement('style');
+    style.type = 'text/css';
+    style.dataset.izipayHidePopinButton = 'true';
+    style.textContent = `
+#kr-popin-button,
+.kr-popin-button,
+.kr-popin-button-enabled,
+.kr-smart-form-modal-button {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+    `.trim();
+  }
+  document.head?.appendChild(style);
 }
 
 function formatPrice(cents: number, currency: string) {

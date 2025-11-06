@@ -6,3 +6,12 @@
 body {
   font-family: "Montserrat", sans-serif;
 }
+
+#kr-popin-button,
+.kr-popin-button,
+.kr-popin-button-enabled,
+.kr-smart-form-modal-button {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
