@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import TicketDownloadCard, { downloadTicketCard } from '@ticket/components/TicketDownloadCard';
+import { FaWhatsapp } from 'react-icons/fa';
 
 type PurchaseTicketType = {
   id: string;
@@ -38,6 +39,7 @@ type Props = {
   slug: string;
   ticketTypes: PurchaseTicketType[];
   isPastEvent?: boolean;
+  paymentsEnabled?: boolean;
 };
 
 type TicketPaymentStatus =
@@ -106,7 +108,12 @@ declare global {
   }
 }
 
-export default function PublicPurchaseForm({ slug, ticketTypes, isPastEvent = false }: Props) {
+export default function PublicPurchaseForm({
+  slug,
+  ticketTypes,
+  isPastEvent = false,
+  paymentsEnabled = true,
+}: Props) {
   const [selectedTypeId, setSelectedTypeId] = useState(ticketTypes[0]?.id ?? '');
   const [quantity, setQuantity] = useState(1);
   const [buyerName, setBuyerName] = useState('');
@@ -129,6 +136,7 @@ export default function PublicPurchaseForm({ slug, ticketTypes, isPastEvent = fa
   const smartformTargetRef = useRef<HTMLDivElement | null>(null);
   const publicKeyRef = useRef<string | null>(null);
   const isPast = Boolean(isPastEvent);
+  const paymentsFeatureEnabled = paymentsEnabled !== false;
   const isPurchaseDisabled = isPast || ticketTypes.length === 0;
   const unavailableMessage = isPast
     ? 'Este evento ya finalizó. Gracias por acompañarnos.'
@@ -227,6 +235,10 @@ export default function PublicPurchaseForm({ slug, ticketTypes, isPastEvent = fa
       setError(isPast ? 'Este evento ya finalizó.' : 'No hay tickets disponibles en este momento.');
       return;
     }
+    if (!paymentsFeatureEnabled) {
+      setError('Los pagos no están disponibles en este momento.');
+      return;
+    }
     if (!selectedType) {
       setError('Selecciona un tipo de ticket disponible');
       return;
@@ -293,6 +305,13 @@ export default function PublicPurchaseForm({ slug, ticketTypes, isPastEvent = fa
   }, [currentOrder]);
 
   const total = selectedType ? (selectedType.priceCents / 100) * quantity : 0;
+  const submitLabel = loading
+    ? 'Procesando…'
+    : paymentsFeatureEnabled
+      ? 'Pagar con Izipay'
+      : 'Pagos no disponibles';
+  const whatsappPurchaseUrl =
+    'https://api.whatsapp.com/send?phone=51903166302&text=Quiero%20comprar%20mi%20entrada%20para%20POPER';
 
   const handleSmartformSuccess = useCallback(
     async (event: Event) => {
@@ -551,12 +570,30 @@ export default function PublicPurchaseForm({ slug, ticketTypes, isPastEvent = fa
               </div>
             )}
 
+            {!paymentsFeatureEnabled && (
+              <div className="space-y-3">
+                <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+                  Las compras online están deshabilitadas temporalmente. Vuelve a intentarlo más tarde o compra por
+                  WhatsApp.
+                </div>
+                <a
+                  href={whatsappPurchaseUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center justify-center gap-2 rounded-md border border-emerald-500/40 bg-emerald-500/15 px-4 py-2 text-sm font-semibold text-emerald-50 shadow-inner shadow-emerald-500/20 transition hover:bg-emerald-500/25"
+                >
+                  <FaWhatsapp className="text-lg" aria-hidden />
+                  Comprar por WhatsApp
+                </a>
+              </div>
+            )}
+
             <button
               type="submit"
-              disabled={loading || !selectedType || maxQuantity === 0}
+              disabled={loading || !selectedType || maxQuantity === 0 || !paymentsFeatureEnabled}
               className="w-full rounded-md bg-[linear-gradient(120deg,#ed1c24,#f7931e)] px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-[rgba(237,28,36,0.35)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {loading ? 'Procesando…' : 'Pagar con Izipay'}
+              {submitLabel}
             </button>
           </form>
         )

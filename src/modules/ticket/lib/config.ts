@@ -29,3 +29,13 @@ export const S3_ENABLED =
   !!TICKET_S3_BUCKET && !!AWS_ACCESS_KEY_ID && !!AWS_SECRET_ACCESS_KEY;
 
 export const DEFAULT_QR_SIZE = Number(process.env.TICKET_QR_SIZE || 280);
+
+function envToBoolean(value: string | undefined, defaultValue: boolean) {
+  if (value === undefined || value === null) return defaultValue;
+  return !['false', '0', 'off', 'no'].includes(value.trim().toLowerCase());
+}
+
+const eventPaymentsFlag =
+  process.env.EVENT_PAYMENTS_ENABLED ?? process.env.NEXT_PUBLIC_EVENT_PAYMENTS_ENABLED;
+
+export const EVENT_PAYMENTS_ENABLED = envToBoolean(eventPaymentsFlag, true);

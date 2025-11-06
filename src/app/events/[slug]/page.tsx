@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { getPublicEvent } from '@ticket/lib/service';
+import { EVENT_PAYMENTS_ENABLED } from '@ticket/lib/config';
 import PublicPurchaseForm from '@ticket/components/PublicPurchaseForm';
 
 type Params = { slug: string };
@@ -63,7 +64,12 @@ export default async function PublicEventPage({ params }: { params: Params }) {
           )}
         </div>
 
-        <PublicPurchaseForm slug={params.slug} ticketTypes={ticketTypes} isPastEvent={isPastEvent} />
+        <PublicPurchaseForm
+          slug={params.slug}
+          ticketTypes={ticketTypes}
+          isPastEvent={isPastEvent}
+          paymentsEnabled={EVENT_PAYMENTS_ENABLED}
+        />
       </div>
     </main>
   );
