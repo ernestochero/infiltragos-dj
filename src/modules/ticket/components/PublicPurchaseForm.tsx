@@ -850,7 +850,7 @@ function buildFinalizePayload(order: CheckoutInitResponse, rawDetail: unknown): 
     providerStatus = answer.status;
   } else if (answer && typeof answer.transactionStatus === 'string') {
     providerStatus = answer.transactionStatus;
-  } else if (rawDetail && typeof rawDetail === 'object' && rawDetail && 'status' in rawDetail) {
+  } else if (rawDetail && typeof rawDetail === 'object' && 'status' in rawDetail) {
     const rawStatus = (rawDetail as Record<string, unknown>).status;
     if (typeof rawStatus === 'string') {
       providerStatus = rawStatus;
