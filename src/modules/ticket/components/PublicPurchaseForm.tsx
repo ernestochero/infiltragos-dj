@@ -56,6 +56,7 @@ type CheckoutInitResponse = {
   formToken: string;
   publicKey: string;
   scriptUrl: string;
+  cssUrl: string;
   amountCents: number;
   currency: string;
   ticketType: {
@@ -103,6 +104,7 @@ declare global {
       closePopin?: () => void;
     };
     __IZIPAY_LOAD_PROMISE__?: Promise<unknown>;
+    __IZIPAY_STYLE_PROMISE__?: Promise<void>;
     __IZIPAY_FORM_RENDERED__?: boolean;
     __IZIPAY_POPIN_OPEN__?: boolean;
   }
@@ -713,7 +715,7 @@ export default function PublicPurchaseForm({
 
   async function initializeSmartform(order: CheckoutInitResponse) {
     if (typeof window === 'undefined') return;
-    const KR = await loadSmartformLibrary(order.publicKey, order.scriptUrl);
+    const KR = await loadSmartformLibrary(order.publicKey, order.scriptUrl, order.cssUrl);
     if (!KR) {
       throw new Error('El formulario de pago no está disponible en este momento.');
     }
@@ -750,8 +752,9 @@ export default function PublicPurchaseForm({
     }
   }
 
-  async function loadSmartformLibrary(publicKey: string, scriptUrl: string) {
+  async function loadSmartformLibrary(publicKey: string, scriptUrl: string, cssUrl: string) {
     if (typeof window === 'undefined') throw new Error('El formulario de pago no está disponible.');
+    await ensureSmartformStyles(cssUrl);
     if (window.KR?.ready) {
       if (publicKeyRef.current !== publicKey && window.KR.setFormConfig) {
         await window.KR.setFormConfig({ publicKey });
@@ -810,6 +813,48 @@ export default function PublicPurchaseForm({
       smartformTargetRef.current = target;
     }
     return target;
+  }
+
+  function ensureSmartformStyles(cssUrl: string): Promise<void> | void {
+    if (typeof document === 'undefined') return;
+    const href = cssUrl?.trim();
+    if (!href) return;
+    const selector = `link[data-izipay-smartform-style="true"][href="${href}"]`;
+    const existing = document.querySelector<HTMLLinkElement>(selector);
+    if (existing) {
+      if (existing.dataset.loaded === 'true' || existing.sheet) return;
+      window.__IZIPAY_STYLE_PROMISE__ ??= new Promise<void>((resolve, reject) => {
+        existing.addEventListener('load', () => {
+          existing.dataset.loaded = 'true';
+          resolve();
+        });
+        existing.addEventListener('error', () =>
+          reject(new Error('No se pudo cargar los estilos del formulario de pago.')),
+        );
+      });
+      return window.__IZIPAY_STYLE_PROMISE__;
+    }
+
+    if (window.__IZIPAY_STYLE_PROMISE__) {
+      return window.__IZIPAY_STYLE_PROMISE__;
+    }
+
+    window.__IZIPAY_STYLE_PROMISE__ = new Promise<void>((resolve, reject) => {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = href;
+      link.dataset.izipaySmartformStyle = 'true';
+      link.addEventListener('load', () => {
+        link.dataset.loaded = 'true';
+        resolve();
+      });
+      link.addEventListener('error', () =>
+        reject(new Error('No se pudo cargar los estilos del formulario de pago.')),
+      );
+      (document.head ?? document.body).appendChild(link);
+    });
+
+    return window.__IZIPAY_STYLE_PROMISE__;
   }
 
   function extractSmartformDetail(event: Event) {

@@ -3,6 +3,7 @@ import { Prisma, TicketPaymentStatus, TicketStatus } from '@prisma/client';
 import prisma from '@core/prisma';
 import { createIzipayPayment } from '@payment/izipay/client';
 import {
+  IZIPAY_CSS_URL,
   IZIPAY_JS_URL,
   IZIPAY_PUBLIC_KEY,
   ensureIzipayCredentials,
@@ -33,6 +34,7 @@ export type SmartformInitResult = {
   };
   publicKey: string;
   scriptUrl: string;
+  cssUrl: string;
 };
 
 export type PaymentFulfillment = {
@@ -160,6 +162,7 @@ export async function createSmartformOrder(
       },
       publicKey: IZIPAY_PUBLIC_KEY,
       scriptUrl: IZIPAY_JS_URL,
+      cssUrl: IZIPAY_CSS_URL,
     };
   } catch (error) {
     await prisma.ticketPayment.update({

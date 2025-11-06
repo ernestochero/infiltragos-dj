@@ -34,6 +34,7 @@ export async function POST(req: NextRequest, { params }: { params: Params }) {
       formToken: init.formToken,
       publicKey: init.publicKey,
       scriptUrl: init.scriptUrl,
+      cssUrl: init.cssUrl,
       amountCents: init.amountCents,
       currency: init.currency,
       ticketType: init.ticketType,

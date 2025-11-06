@@ -5,6 +5,10 @@ export const IZIPAY_JS_URL =
   process.env.IZIPAY_JS_URL ||
   'https://static.micuentaweb.pe/static/js/krypton-client/V4.0/stable/kr-payment-form.min.js';
 
+export const IZIPAY_CSS_URL =
+  process.env.IZIPAY_CSS_URL ||
+  'https://static.micuentaweb.pe/static/js/krypton-client/V4.0/ext/classic-reset.css';
+
 export const IZIPAY_SITE_ID = process.env.IZIPAY_SITE_ID || '';
 export const IZIPAY_API_PASSWORD = process.env.IZIPAY_API_PASSWORD || '';
 export const IZIPAY_SHA_KEY = process.env.IZIPAY_SHA_KEY || '';
