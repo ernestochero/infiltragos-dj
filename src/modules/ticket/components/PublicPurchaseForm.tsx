@@ -836,7 +836,7 @@ function buildFinalizePayload(order: CheckoutInitResponse, rawDetail: unknown): 
     if (typeof orderData.id === 'string') {
       orderCode = orderData.id;
     }
-  } else if (rawDetail && typeof rawDetail === 'object' && rawDetail && 'orderId' in rawDetail) {
+  } else if (rawDetail && typeof rawDetail === 'object' && 'orderId' in rawDetail) {
     const rawOrder = rawDetail as Record<string, unknown>;
     if (typeof rawOrder.orderId === 'string') {
       orderCode = rawOrder.orderId;
