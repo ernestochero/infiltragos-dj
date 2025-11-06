@@ -816,7 +816,7 @@ function describePaymentStatus(status: TicketPaymentStatus) {
 
 function buildFinalizePayload(order: CheckoutInitResponse, rawDetail: unknown): FinalizePayload {
   const detail =
-    rawDetail && typeof rawDetail === 'object' && rawDetail && 'clientAnswer' in (rawDetail as Record<string, unknown>)
+    rawDetail && typeof rawDetail === 'object' && 'clientAnswer' in (rawDetail as Record<string, unknown>)
       ? ((rawDetail as Record<string, unknown>).clientAnswer as Record<string, unknown> | null | undefined) ??
         (rawDetail as Record<string, unknown>)
       : (rawDetail as Record<string, unknown> | null | undefined);
