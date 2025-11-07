@@ -144,6 +144,7 @@ export default function PublicPurchaseForm({
   const unavailableMessage = isPast
     ? 'Este evento ya finalizó. Gracias por acompañarnos.'
     : 'Los tickets estarán disponibles muy pronto. Mantente atento.';
+  const canShowManualPurchaseCta = !isPast && ticketTypes.length > 0;
 
   const selectedType = useMemo(
     () => ticketTypes.find((type) => type.id === selectedTypeId) ?? ticketTypes[0],
@@ -411,7 +412,7 @@ export default function PublicPurchaseForm({
   const submitLabel = loading
     ? 'Procesando…'
     : paymentsFeatureEnabled
-      ? 'Pagar con Izipay'
+      ? 'Comprar con Izipay'
       : 'Pagos no disponibles';
   const whatsappPurchaseUrl =
     'https://api.whatsapp.com/send?phone=51903166302&text=Quiero%20comprar%20mi%20entrada%20para%20POPER';
@@ -554,7 +555,7 @@ export default function PublicPurchaseForm({
           <div className="rounded-xl border border-white/10 bg-black/20 p-5 text-center text-sm text-gray-300">
             {unavailableMessage}
           </div>
-        ) : (
+        ) : paymentsFeatureEnabled ? (
           <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-white/10 bg-black/20 p-5">
             <div>
               <p className="text-sm font-semibold text-gray-100">Compra tus entradas</p>
@@ -666,24 +667,6 @@ export default function PublicPurchaseForm({
               </div>
             )}
 
-            {!paymentsFeatureEnabled && (
-              <div className="space-y-3">
-                <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
-                  Las compras online están deshabilitadas temporalmente. Vuelve a intentarlo más tarde o compra por
-                  WhatsApp.
-                </div>
-                <a
-                  href={whatsappPurchaseUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center justify-center gap-2 rounded-md border border-emerald-500/40 bg-emerald-500/15 px-4 py-2 text-sm font-semibold text-emerald-50 shadow-inner shadow-emerald-500/20 transition hover:bg-emerald-500/25"
-                >
-                  <FaWhatsapp className="text-lg" aria-hidden />
-                  Comprar por WhatsApp
-                </a>
-              </div>
-            )}
-
             <button
               type="submit"
               disabled={loading || !selectedType || maxQuantity === 0 || !paymentsFeatureEnabled}
@@ -692,7 +675,39 @@ export default function PublicPurchaseForm({
               {submitLabel}
             </button>
           </form>
+        ) : (
+          <div className="space-y-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-5 text-sm text-amber-50">
+            <p className="font-semibold text-amber-100">Pagos con tarjeta no disponibles</p>
+            <p className="text-xs text-amber-50">
+              Las compras online con Izipay están deshabilitadas temporalmente. Escríbenos por WhatsApp y coordinamos tu
+              reserva con transferencia, depósito u otro método.
+            </p>
+          </div>
         )
+      )}
+
+      {!showTicketsInline && canShowManualPurchaseCta && (
+        <div className="rounded-xl border border-white/10 bg-black/15 p-4 sm:flex sm:items-center sm:justify-between sm:gap-4">
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-gray-100">
+              {paymentsFeatureEnabled ? '¿Prefieres otro medio de pago?' : 'Compra por WhatsApp'}
+            </p>
+            <p className="text-xs text-gray-400">
+              {paymentsFeatureEnabled
+                ? 'También puedes coordinar tu compra por WhatsApp si prefieres transferencias, efectivo u otro medio diferente a tarjeta.'
+                : 'Por ahora estamos atendiendo las compras manualmente. Escríbenos y reservamos tus entradas al instante.'}
+            </p>
+          </div>
+          <a
+            href={whatsappPurchaseUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-3 inline-flex items-center justify-center gap-2 rounded-md border border-emerald-500/40 bg-emerald-500/15 px-4 py-2 text-sm font-semibold text-emerald-50 shadow-inner shadow-emerald-500/20 transition hover:bg-emerald-500/25 sm:mt-0"
+          >
+            <FaWhatsapp className="text-lg" aria-hidden />
+            Comprar por WhatsApp
+          </a>
+        </div>
       )}
 
       {showTicketsInline && result && (
