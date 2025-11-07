@@ -560,8 +560,7 @@ export default function PublicPurchaseForm({
             <div>
               <p className="text-sm font-semibold text-gray-100">Compra tus entradas</p>
               <p className="text-xs text-gray-400">
-                El pago se procesa con Izipay Smartform. La ventana emergente te permitirá pagar con tarjeta o Yape sin
-                salir de esta página.
+                El pago se procesa con Izipay. La ventana emergente te permitirá pagar con tarjeta sin salir de esta página.
               </p>
             </div>
 
