@@ -3,10 +3,12 @@ import { Prisma, TicketPaymentStatus, TicketStatus } from '@prisma/client';
 import prisma from '@core/prisma';
 import { createIzipayPayment } from '@payment/izipay/client';
 import {
+  IZIPAY_CSS_URL,
   IZIPAY_JS_URL,
   IZIPAY_PUBLIC_KEY,
   ensureIzipayCredentials,
 } from '@payment/izipay/config';
+import { detectThreeDSFailure } from '@payment/izipay/threeds';
 import { TicketModuleError, assertOrFail } from './errors';
 import { getPublicEvent } from './service';
 import { issueTickets } from './service';
@@ -33,6 +35,7 @@ export type SmartformInitResult = {
   };
   publicKey: string;
   scriptUrl: string;
+  cssUrl: string;
 };
 
 export type PaymentFulfillment = {
@@ -160,6 +163,7 @@ export async function createSmartformOrder(
       },
       publicKey: IZIPAY_PUBLIC_KEY,
       scriptUrl: IZIPAY_JS_URL,
+      cssUrl: IZIPAY_CSS_URL,
     };
   } catch (error) {
     await prisma.ticketPayment.update({
@@ -201,7 +205,7 @@ export async function refreshPaymentStatus(payload: ProviderStatusPayload): Prom
       ? (payload.rawAnswer as Record<string, unknown>)
       : undefined;
 
-  const normalized = normalizeStatus(
+  let normalized = normalizeStatus(
     payload.providerStatus ??
       (rawAnswerObject
         ? extractOrderStatus(rawAnswerObject) || extractTransactionStatus(rawAnswerObject)
@@ -242,6 +246,22 @@ export async function refreshPaymentStatus(payload: ProviderStatusPayload): Prom
     transactionUuid,
     result: payment.issue ? mapIssueToResult(payment) : undefined,
   };
+
+  const inspectionAnswer = rawAnswerObject ?? payment.rawResponse;
+  const threeDSFailure = detectThreeDSFailure(inspectionAnswer);
+  if (threeDSFailure) {
+    const existingMessage =
+      typeof updateData.providerMessage === 'string'
+        ? updateData.providerMessage
+        : typeof payment.providerMessage === 'string'
+          ? payment.providerMessage
+          : undefined;
+    normalized = TicketPaymentStatus.DECLINED;
+    const mergedMessage = mergeMessages(threeDSFailure.message, existingMessage);
+    updateData.providerMessage = mergedMessage ?? threeDSFailure.message;
+    updateData.lastError = threeDSFailure.message;
+    baseResponse.message = updateData.providerMessage ?? threeDSFailure.message;
+  }
 
   if (normalized === TicketPaymentStatus.PAID || normalized === TicketPaymentStatus.FULFILLED) {
     return await handleSuccessfulPayment(payment.id, updateData, payload, baseResponse);
@@ -578,6 +598,20 @@ function normalizeStatus(rawStatus?: string | null): TicketPaymentStatus {
   }
   if (value === 'FULFILLED') return TicketPaymentStatus.FULFILLED;
   return TicketPaymentStatus.PENDING;
+}
+
+function mergeMessages(primary?: string | null, secondary?: string | null) {
+  const parts = [primary, secondary]
+    .map((message) => message?.trim())
+    .filter((message): message is string => Boolean(message));
+  if (!parts.length) return undefined;
+  const seen = new Set<string>();
+  const unique = parts.filter((message) => {
+    if (seen.has(message)) return false;
+    seen.add(message);
+    return true;
+  });
+  return unique.join(' | ');
 }
 
 function mapIssueToResult(
