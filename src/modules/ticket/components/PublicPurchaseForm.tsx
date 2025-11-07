@@ -169,7 +169,7 @@ export default function PublicPurchaseForm({
     ? {
         title: 'Compra directa por WhatsApp (Yape / Plin)',
         description:
-          'Selecciona el tipo de entrada que quieres y, si prefieres Yape o Plin, escríbenos por WhatsApp. Coordinamos tu compra manual al instante; si deseas pagar con tarjeta, usa el formulario de abajo.',
+          'Escríbenos por WhatsApp. Coordinamos tu compra manual al instante; si deseas pagar con tarjeta, usa el formulario de abajo.',
       }
     : {
         title: 'Estamos atendiendo las compras por WhatsApp',
