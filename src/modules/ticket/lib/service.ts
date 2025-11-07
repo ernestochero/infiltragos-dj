@@ -291,7 +291,7 @@ export async function getPublicEvent(identifier: string) {
   );
 
   const ticketTypes = await prisma.ticketType.findMany({
-    where: { eventId: event.id, status: { not: TicketTypeStatus.ARCHIVED } },
+    where: { eventId: event.id, status: TicketTypeStatus.ON_SALE },
     orderBy: { createdAt: 'asc' },
     include: {
       _count: { select: { tickets: true, issues: true } },
