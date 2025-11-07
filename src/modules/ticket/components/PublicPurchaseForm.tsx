@@ -116,7 +116,27 @@ export default function PublicPurchaseForm({
   isPastEvent = false,
   paymentsEnabled = true,
 }: Props) {
-  const [selectedTypeId, setSelectedTypeId] = useState(ticketTypes[0]?.id ?? '');
+  const hasMultipleTicketTypes = ticketTypes.length > 1;
+  const defaultTicketTypeId = useMemo(
+    () => (hasMultipleTicketTypes ? '' : ticketTypes[0]?.id ?? ''),
+    [hasMultipleTicketTypes, ticketTypes],
+  );
+  const [selectedTypeId, setSelectedTypeId] = useState(defaultTicketTypeId);
+  const ticketTypeIds = useMemo(() => ticketTypes.map((type) => type.id), [ticketTypes]);
+  useEffect(() => {
+    setSelectedTypeId((prev) => {
+      if (!hasMultipleTicketTypes) {
+        return defaultTicketTypeId;
+      }
+      if (prev && ticketTypeIds.includes(prev)) {
+        return prev;
+      }
+      return '';
+    });
+  }, [defaultTicketTypeId, hasMultipleTicketTypes, ticketTypeIds]);
+  const restoreDefaultTicketType = useCallback(() => {
+    setSelectedTypeId(defaultTicketTypeId);
+  }, [defaultTicketTypeId]);
   const [quantity, setQuantity] = useState(1);
   const [buyerName, setBuyerName] = useState('');
   const [buyerEmail, setBuyerEmail] = useState('');
@@ -149,7 +169,7 @@ export default function PublicPurchaseForm({
     ? {
         title: 'Compra directa por WhatsApp (Yape / Plin)',
         description:
-          'Escríbenos y coordinamos tu compra al instante. Si deseas pagar con tarjeta, usa el formulario de abajo.',
+          'Selecciona el tipo de entrada que quieres y, si prefieres Yape o Plin, escríbenos por WhatsApp. Coordinamos tu compra manual al instante; si deseas pagar con tarjeta, usa el formulario de abajo.',
       }
     : {
         title: 'Estamos atendiendo las compras por WhatsApp',
@@ -158,8 +178,10 @@ export default function PublicPurchaseForm({
       };
 
   const selectedType = useMemo(
-    () => ticketTypes.find((type) => type.id === selectedTypeId) ?? ticketTypes[0],
-    [ticketTypes, selectedTypeId],
+    () =>
+      ticketTypes.find((type) => type.id === selectedTypeId) ??
+      (!hasMultipleTicketTypes ? ticketTypes[0] : undefined),
+    [ticketTypes, selectedTypeId, hasMultipleTicketTypes],
   );
 
   const maxQuantity = selectedType ? Math.max(selectedType.available, 0) : 0;
@@ -343,7 +365,7 @@ export default function PublicPurchaseForm({
       return;
     }
     if (!selectedType) {
-      setError('Selecciona un tipo de ticket disponible');
+      setError('Selecciona el tipo de entrada que deseas comprar');
       return;
     }
     if (!buyerName.trim() || !buyerEmail.trim()) {
@@ -464,7 +486,7 @@ export default function PublicPurchaseForm({
           setBuyerEmail('');
           setBuyerPhone('');
           setQuantity(1);
-          setSelectedTypeId(ticketTypes[0]?.id ?? selectedType?.id ?? '');
+          restoreDefaultTicketType();
           clearCurrentOrder({ resetStatus: false });
           dismissPopin({ clearOrder: false, resetStatus: false });
         } else {
@@ -486,7 +508,7 @@ export default function PublicPurchaseForm({
         setLoading(false);
       }
     },
-    [clearCurrentOrder, dismissPopin, slug, ticketTypes, selectedType, startStatusPolling],
+    [clearCurrentOrder, dismissPopin, restoreDefaultTicketType, slug, startStatusPolling],
   );
 
   const finalizeDeclined = useCallback(
@@ -600,15 +622,27 @@ export default function PublicPurchaseForm({
             )}
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-300">Tipo de ticket</label>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-gray-300">Tipo de entrada</label>
+                <p className="text-xs text-gray-400">
+                  {hasMultipleTicketTypes
+                    ? 'Elige la categoría que deseas comprar antes de completar tus datos.'
+                    : 'Esta es la categoría disponible para este evento.'}
+                </p>
+              </div>
               <select
-                value={selectedType?.id}
+                value={selectedTypeId}
                 onChange={(e) => {
                   setSelectedTypeId(e.target.value);
                   setQuantity(1);
                 }}
                 className="w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm text-gray-100 focus:border-indigo-400 focus:outline-none"
               >
+                {hasMultipleTicketTypes && (
+                  <option value="" disabled>
+                    Selecciona el tipo de entrada
+                  </option>
+                )}
                 {ticketTypes.map((type) => (
                   <option key={type.id} value={type.id}>
                     {type.name} · {formatPrice(type.priceCents, type.currency)}{' '}
@@ -616,11 +650,12 @@ export default function PublicPurchaseForm({
                   </option>
                 ))}
               </select>
-              {selectedType && (
-                <p className="text-xs text-gray-400">
-                  {selectedType.description || ''} {selectedType.available} disponibles
-                </p>
-              )}
+              <p className="text-xs text-gray-400">
+                {selectedType
+                  ? `${selectedType.description || ''} ${selectedType.available} disponibles`.trim() ||
+                    `${selectedType.available} disponibles`
+                  : 'Selecciona una entrada para ver su descripción y disponibilidad.'}
+              </p>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
@@ -659,15 +694,20 @@ export default function PublicPurchaseForm({
                 <input
                   type="number"
                   min={1}
-                  max={maxQuantity || 1}
+                  max={Math.max(maxQuantity, 1)}
                   value={quantity}
                   onChange={(e) => {
                     const val = Number.parseInt(e.target.value, 10);
                     setQuantity(Number.isNaN(val) ? 1 : Math.max(1, Math.min(val, maxQuantity || 1)));
                   }}
-                  className="mt-1 w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm text-gray-100 focus:border-indigo-400 focus:outline-none"
+                  disabled={!selectedType}
+                  className="mt-1 w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm text-gray-100 focus:border-indigo-400 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
                 />
-                <p className="text-xs text-gray-400">Disponibles: {maxQuantity}</p>
+                <p className="text-xs text-gray-400">
+                  {selectedType
+                    ? `Disponibles: ${maxQuantity}`
+                    : 'Selecciona un tipo de entrada para habilitar la cantidad.'}
+                </p>
               </div>
             </div>
 
@@ -816,7 +856,7 @@ export default function PublicPurchaseForm({
     setBuyerEmail('');
     setBuyerPhone('');
     setQuantity(1);
-    setSelectedTypeId(ticketTypes[0]?.id ?? '');
+    restoreDefaultTicketType();
     clearCurrentOrder();
     dismissPopin({ clearOrder: false });
   }
