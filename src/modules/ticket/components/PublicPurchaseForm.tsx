@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import TicketDownloadCard, { downloadTicketCard } from '@ticket/components/TicketDownloadCard';
 import { FaWhatsapp } from 'react-icons/fa';
 
@@ -103,6 +102,8 @@ declare global {
       renderElements?: (selector: string) => Promise<void>;
       openPopin?: (options?: { formToken?: string }) => void;
       closePopin?: () => void;
+      onSubmit?: (handler: (event: unknown) => void) => Promise<void> | void;
+      removeEventCallbacks?: (eventName: string, handler: (event: unknown) => void) => Promise<void> | void;
     };
     __IZIPAY_LOAD_PROMISE__?: Promise<unknown>;
     __IZIPAY_STYLE_PROMISE__?: Promise<void>;
@@ -152,7 +153,6 @@ export default function PublicPurchaseForm({
   const [currentOrder, setCurrentOrder] = useState<CheckoutInitResponse | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<TicketPaymentStatus | null>(null);
   const [processingPayment, setProcessingPayment] = useState(false);
-  const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
   const orderRef = useRef<CheckoutInitResponse | null>(null);
   const finalizingRef = useRef(false);
   const statusPollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -161,10 +161,14 @@ export default function PublicPurchaseForm({
   const activeOrderCodeRef = useRef<string | null>(null);
   const smartformTargetRef = useRef<HTMLDivElement | null>(null);
   const publicKeyRef = useRef<string | null>(null);
-const popinPayButtonRef = useRef<HTMLElement | null>(null);
-const popinPayWatcherRef = useRef<number | null>(null);
-const popinMutationObserverRef = useRef<MutationObserver | null>(null);
-const popinClickProxyCleanupRef = useRef<(() => void) | null>(null);
+  const popinPayButtonRef = useRef<HTMLElement | null>(null);
+  const popinPayWatcherRef = useRef<number | null>(null);
+  const popinMutationObserverRef = useRef<MutationObserver | null>(null);
+  const popinClickProxyCleanupRef = useRef<(() => void) | null>(null);
+  const kryptonHandlersRef = useRef<{
+    submit?: (event: unknown) => void;
+  } | null>(null);
+  const httpRequestOverlayShownRef = useRef(false);
   const isPast = Boolean(isPastEvent);
   const paymentsFeatureEnabled = paymentsEnabled !== false;
   const isPurchaseDisabled = isPast || ticketTypes.length === 0;
@@ -207,7 +211,6 @@ const popinClickProxyCleanupRef = useRef<(() => void) | null>(null);
   const canIncreaseQuantity = selectedType ? quantity < Math.max(maxQuantity, 1) : false;
 
   const handlePopinPayClick = useCallback(() => {
-    console.info('[Izipay] pay button clicked listener');
     setProcessingPayment(true);
   }, []);
 
@@ -221,7 +224,6 @@ const popinClickProxyCleanupRef = useRef<(() => void) | null>(null);
         if (!button) return;
         const text = button.textContent?.toUpperCase() ?? '';
         if (text.includes('PAGAR') || text.includes('PAYER') || text.includes('PAY')) {
-          console.info('[Izipay] popin click proxy fired');
           setProcessingPayment(true); // Show overlay as soon as user clicks pay
         }
       };
@@ -229,7 +231,6 @@ const popinClickProxyCleanupRef = useRef<(() => void) | null>(null);
       popinClickProxyCleanupRef.current = () => {
         root.removeEventListener('click', handler, true);
       };
-      console.info('[Izipay] popin click proxy attached');
     },
     [setProcessingPayment],
   );
@@ -247,21 +248,65 @@ const popinClickProxyCleanupRef = useRef<(() => void) | null>(null);
     if (popinMutationObserverRef.current) return;
     const observer = new MutationObserver(() => {
       if (ensurePopinClickProxy()) {
-        console.info('[Izipay] mutation observer attached click proxy');
         observer.disconnect();
         popinMutationObserverRef.current = null;
       }
     });
     observer.observe(document.body, { childList: true, subtree: true });
     popinMutationObserverRef.current = observer;
-    console.info('[Izipay] popin mutation observer armed');
   }, [ensurePopinClickProxy]);
 
-const stopPopinSubmitWatcher = useCallback(() => {
+  const detachKryptonHandlers = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    const KR = window.KR;
+    const handlers = kryptonHandlersRef.current;
+    if (!KR || !handlers || !KR.removeEventCallbacks) {
+      kryptonHandlersRef.current = null;
+      return;
+    }
+    try {
+      if (handlers.submit) {
+        KR.removeEventCallbacks('onSubmit', handlers.submit);
+      }
+    } catch (error) {
+      console.warn('[Izipay] removeEventCallbacks failed', error);
+    } finally {
+      kryptonHandlersRef.current = null;
+    }
+  }, []);
+
+  const attachKryptonHandlers = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    const KR = window.KR;
+    if (!KR?.onSubmit) return;
+    detachKryptonHandlers();
+    const submitHandler = () => {
+      console.info('[Izipay] KR.onSubmit fired');
+      setProcessingPayment(true);
+    };
+    try {
+      KR.onSubmit(submitHandler);
+      kryptonHandlersRef.current = { submit: submitHandler };
+    } catch (error) {
+      console.warn('[Izipay] KR.onSubmit registration failed', error);
+    }
+  }, [detachKryptonHandlers]);
+
+  const showProcessingOverlayFromHttpRequest = useCallback(() => {
+    if (httpRequestOverlayShownRef.current) return;
+    httpRequestOverlayShownRef.current = true;
+    setProcessingPayment(true);
+  }, []);
+
+  const hideProcessingOverlay = useCallback(() => {
+    httpRequestOverlayShownRef.current = false;
+    setProcessingPayment(false);
+  }, []);
+
+  const stopPopinSubmitWatcher = useCallback(() => {
     if (popinPayWatcherRef.current) {
       window.clearInterval(popinPayWatcherRef.current);
       popinPayWatcherRef.current = null;
-      console.info('[Izipay] popin submit watcher stopped');
     }
     if (popinPayButtonRef.current) {
       popinPayButtonRef.current.removeEventListener('click', handlePopinPayClick, true);
@@ -269,10 +314,9 @@ const stopPopinSubmitWatcher = useCallback(() => {
     }
   }, [handlePopinPayClick]);
 
-const startPopinSubmitWatcher = useCallback(() => {
+  const startPopinSubmitWatcher = useCallback(() => {
     if (typeof document === 'undefined') return;
     if (popinPayWatcherRef.current) return;
-    console.info('[Izipay] popin submit watcher armed');
     popinPayWatcherRef.current = window.setInterval(() => {
       if (popinPayButtonRef.current && document.contains(popinPayButtonRef.current)) {
         return;
@@ -289,7 +333,6 @@ const startPopinSubmitWatcher = useCallback(() => {
       if (payButton) {
         popinPayButtonRef.current = payButton;
         popinPayButtonRef.current.addEventListener('click', handlePopinPayClick, true);
-        console.info('[Izipay] pay button listener attached via watcher');
       }
     }, 250);
   }, [handlePopinPayClick]);
@@ -308,8 +351,9 @@ const startPopinSubmitWatcher = useCallback(() => {
       popinMutationObserverRef.current = null;
       popinClickProxyCleanupRef.current?.();
       popinClickProxyCleanupRef.current = null;
+      detachKryptonHandlers();
     };
-  }, [stopPopinSubmitWatcher]);
+  }, [stopPopinSubmitWatcher, detachKryptonHandlers]);
 
   const stopStatusPolling = useCallback(() => {
     if (statusPollTimeoutRef.current) {
@@ -400,24 +444,23 @@ const startPopinSubmitWatcher = useCallback(() => {
         clearCurrentOrder({ resetStatus: options?.resetStatus });
       }
       cleanupSmartformArtifacts();
-      setProcessingPayment(false);
+      hideProcessingOverlay();
       stopPopinSubmitWatcher();
       popinMutationObserverRef.current?.disconnect();
       popinMutationObserverRef.current = null;
       popinClickProxyCleanupRef.current?.();
       popinClickProxyCleanupRef.current = null;
+      detachKryptonHandlers();
     },
-    [cleanupSmartformArtifacts, clearCurrentOrder, stopPopinSubmitWatcher],
+    [cleanupSmartformArtifacts, clearCurrentOrder, stopPopinSubmitWatcher, detachKryptonHandlers, hideProcessingOverlay],
   );
 
   const startStatusPolling = useCallback(
     (orderCode: string) => {
       if (!orderCode) return;
       if (isPollingRef.current && activeOrderCodeRef.current === orderCode) {
-        console.info('[Izipay] poll already running for', orderCode);
         return;
       }
-      console.info('[Izipay] starting status polling', orderCode);
       isPollingRef.current = true;
       activeOrderCodeRef.current = orderCode;
 
@@ -426,7 +469,6 @@ const startPopinSubmitWatcher = useCallback(() => {
         if (activeOrderCodeRef.current !== orderCode) return;
 
         try {
-          console.info('[checkout status poll] tick', orderCode, new Date().toISOString());
           const response = await fetch(
             `/api/events/${slug}/checkout/status?orderCode=${encodeURIComponent(orderCode)}`,
             {
@@ -556,7 +598,6 @@ const startPopinSubmitWatcher = useCallback(() => {
       if (!button) return;
       const text = button.textContent?.toUpperCase() ?? '';
       if (text.includes('PAGAR') || text.includes('PAY') || button.dataset.action === 'submit') {
-        console.info('[Izipay] pay button clicked, showing processing overlay');
         setProcessingPayment(true);
       }
     };
@@ -567,11 +608,6 @@ const startPopinSubmitWatcher = useCallback(() => {
   }, []);
 
   useEffect(() => {
-    if (processingPayment) {
-      console.info('[Izipay] showing payment processing overlay');
-    } else {
-      console.info('[Izipay] hiding payment processing overlay');
-    }
     if (typeof document === 'undefined') return;
     const body = document.body;
     if (!body) return;
@@ -591,10 +627,6 @@ const startPopinSubmitWatcher = useCallback(() => {
     ensurePopinButtonHidden();
   }, []);
 
-  useEffect(() => {
-    if (typeof document === 'undefined') return;
-    setPortalRoot(document.body);
-  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -693,7 +725,6 @@ const startPopinSubmitWatcher = useCallback(() => {
 
   const handleSmartformSuccess = useCallback(
     async (event: Event) => {
-      console.info('[Izipay] payment success event', event);
       const detail = extractSmartformDetail(event);
       const order = orderRef.current;
       if (!order || finalizingRef.current) return;
@@ -748,10 +779,10 @@ const startPopinSubmitWatcher = useCallback(() => {
       } finally {
         finalizingRef.current = false;
         setLoading(false);
-        setProcessingPayment(false); // Ensure overlay is hidden after payment finishes
+        hideProcessingOverlay(); // Ensure overlay is hidden after payment finishes
       }
     },
-    [clearCurrentOrder, dismissPopin, restoreDefaultTicketType, slug, startStatusPolling],
+    [clearCurrentOrder, dismissPopin, hideProcessingOverlay, restoreDefaultTicketType, slug, startStatusPolling],
   );
 
   const finalizeDeclined = useCallback(
@@ -785,7 +816,7 @@ const startPopinSubmitWatcher = useCallback(() => {
       setLoading(false);
       setPaymentStatus('DECLINED');
       setError('No pudimos completar el pago. Intenta nuevamente.');
-      setProcessingPayment(false); // Ensure overlay is hidden after error
+      hideProcessingOverlay(); // Ensure overlay is hidden after error
       const order = orderRef.current;
       if (order) {
         finalizeDeclined(order, detail).catch((err) => {
@@ -795,7 +826,7 @@ const startPopinSubmitWatcher = useCallback(() => {
       clearCurrentOrder({ resetStatus: false });
       dismissPopin({ clearOrder: false, resetStatus: false });
     },
-    [clearCurrentOrder, dismissPopin, finalizeDeclined],
+    [clearCurrentOrder, dismissPopin, finalizeDeclined, hideProcessingOverlay],
   );
 
   useEffect(() => {
@@ -806,8 +837,8 @@ const startPopinSubmitWatcher = useCallback(() => {
 
     const successListener = (event: Event) => handleSmartformSuccess(event);
     const errorListener = (event: Event) => handleSmartformError(event);
-    const submitListener = () => {
-      console.info('[Izipay] payment submit event received');
+    const submitListener = (event: Event) => {
+      console.info('[Izipay] submit event detected', event.type);
       setProcessingPayment(true); // Show overlay as soon as Izipay begins processing
     };
     const popinCloseListener = () => {
@@ -817,66 +848,80 @@ const startPopinSubmitWatcher = useCallback(() => {
       }
     };
 
+    const successEvents = ['kr-payment-success', 'krPaymentSuccess', 'kr-popin-success', 'krPopinSuccess'];
+    const errorEvents = [
+      'kr-payment-error',
+      'krPaymentError',
+      'kr-payment-failure',
+      'krPaymentFailure',
+      'kr-popin-error',
+      'krPopinError',
+      'kr-popin-failure',
+      'krPopinFailure',
+    ];
+    const submitEvents = ['kr-payment-submit', 'krPaymentSubmit', 'kr-popin-submit', 'krPopinSubmit'];
+    const closeEvents = ['kr-popin-close', 'krPopinClose'];
+
     targets.forEach((target) => {
-      target.addEventListener('kr-payment-success', successListener as EventListener);
-      target.addEventListener('krPaymentSuccess', successListener as EventListener);
-      target.addEventListener('kr-payment-error', errorListener as EventListener);
-      target.addEventListener('krPaymentError', errorListener as EventListener);
-      target.addEventListener('kr-payment-failure', errorListener as EventListener);
-      target.addEventListener('kr-payment-submit', submitListener);
-      target.addEventListener('krPaymentSubmit', submitListener);
-      target.addEventListener('kr-popin-close', popinCloseListener);
+      successEvents.forEach((eventName) => target.addEventListener(eventName, successListener as EventListener));
+      errorEvents.forEach((eventName) => target.addEventListener(eventName, errorListener as EventListener));
+      submitEvents.forEach((eventName) => target.addEventListener(eventName, submitListener));
+      closeEvents.forEach((eventName) => target.addEventListener(eventName, popinCloseListener));
     });
 
     return () => {
       targets.forEach((target) => {
-        target.removeEventListener('kr-payment-success', successListener as EventListener);
-        target.removeEventListener('krPaymentSuccess', successListener as EventListener);
-        target.removeEventListener('kr-payment-error', errorListener as EventListener);
-        target.removeEventListener('krPaymentError', errorListener as EventListener);
-        target.removeEventListener('kr-payment-failure', errorListener as EventListener);
-        target.removeEventListener('kr-payment-submit', submitListener);
-        target.removeEventListener('krPaymentSubmit', submitListener);
-        target.removeEventListener('kr-popin-close', popinCloseListener);
+        successEvents.forEach((eventName) => target.removeEventListener(eventName, successListener as EventListener));
+        errorEvents.forEach((eventName) => target.removeEventListener(eventName, errorListener as EventListener));
+        submitEvents.forEach((eventName) => target.removeEventListener(eventName, submitListener));
+        closeEvents.forEach((eventName) => target.removeEventListener(eventName, popinCloseListener));
       });
     };
   }, [dismissPopin, handleSmartformSuccess, handleSmartformError, result]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    console.info('[Izipay] listening for postMessage events');
     const handleMessage = (event: MessageEvent) => {
-      const hints = extractIzipayHints(event.data);
-      const normalizedHints = hints.map((hint) => normalizeEventType(hint)).filter(Boolean);
-      console.info('[Izipay] postMessage received', {
-        origin: event.origin,
-        hints,
-        normalizedHints,
-        data: event.data,
-      });
+      console.info('[Izipay] postMessage payload', event.data);
+      const normalizedHints = extractIzipayHints(event.data)
+        .map((hint) => normalizeEventType(hint))
+        .filter(Boolean) as string[];
+      const hintIncludes = (...values: string[]) =>
+        normalizedHints.some((hint) => values.some((value) => hint.includes(value)));
+
+      if (hintIncludes('httprequest')) {
+        console.info('[Izipay] message httpRequest detected');
+        showProcessingOverlayFromHttpRequest();
+        return;
+      }
+      if (hintIncludes('httpanswer')) {
+        console.info('[Izipay] message httpAnswer detected');
+        hideProcessingOverlay();
+        return;
+      }
       if (matchesIzipayEvent(event.data, ['krpaymentsubmit', 'krpaymentformsubmit', 'krsmartformsubmit', 'submit'])) {
-        console.info('[Izipay] message submit detected', event.data);
-        setProcessingPayment(true);
+        console.info('[Izipay] message submit detected');
+        showProcessingOverlayFromHttpRequest();
         return;
       }
       if (matchesIzipayEvent(event.data, ['krpaymentsuccess', 'paymentaccepted', 'authorized', 'success'])) {
-        console.info('[Izipay] message success detected', event.data);
-        setProcessingPayment(true);
+        console.info('[Izipay] message success detected');
+        hideProcessingOverlay();
         return;
       }
       if (matchesIzipayEvent(event.data, ['krpaymenterror', 'krpaymentfailure', 'paymentrefused', 'error', 'failure'])) {
-        console.info('[Izipay] message error/failure detected', event.data);
-        setProcessingPayment(false);
+        console.info('[Izipay] message error/failure detected');
+        hideProcessingOverlay();
         return;
       }
-      if (matchesIzipayEvent(event.data, ['krpaymentclose', 'krpopinclose', 'close'])) {
-        console.info('[Izipay] message close detected', event.data);
-        setProcessingPayment(false);
+      if (matchesIzipayEvent(event.data, ['krpaymentclose', 'krpopinclose'])) {
+        console.info('[Izipay] message close detected');
+        hideProcessingOverlay();
       }
     };
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [extractIzipayHints, matchesIzipayEvent, normalizeEventType]);
+  }, [extractIzipayHints, hideProcessingOverlay, matchesIzipayEvent, normalizeEventType, showProcessingOverlayFromHttpRequest]);
 
   return (
     <div className="space-y-4">
@@ -1142,26 +1187,23 @@ const startPopinSubmitWatcher = useCallback(() => {
         </div>
       )}
 
-      {processingPayment && portalRoot
-        ? createPortal(
-            <div
-              data-kr-processing-overlay="true"
-              className="fixed inset-0 flex items-center justify-center bg-black/80 px-4 backdrop-blur-[1px]"
-              role="status"
-              aria-live="assertive"
-              style={{ zIndex: 2147483647 }}
-            >
-              <div className="w-full max-w-sm rounded-2xl border border-white/20 bg-black/80 p-6 text-center text-sm text-gray-200 shadow-2xl">
-                <div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                <p className="text-base font-semibold text-white">Procesando tu pago…</p>
-                <p className="mt-1 text-xs text-gray-300">
-                  No cierres esta ventana. Estamos confirmando tu transacción con Izipay.
-                </p>
-              </div>
-            </div>,
-            portalRoot,
-          )
-        : null}
+      {processingPayment && (
+        <div
+          data-kr-processing-overlay="true"
+          className="fixed inset-0 flex items-center justify-center bg-black/80 px-4 backdrop-blur-[1px]"
+          role="status"
+          aria-live="assertive"
+          style={{ zIndex: 2147483647 }}
+        >
+          <div className="w-full max-w-sm rounded-2xl border border-white/20 bg-black/80 p-6 text-center text-sm text-gray-200 shadow-2xl">
+            <div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+            <p className="text-base font-semibold text-white">Procesando tu pago…</p>
+            <p className="mt-1 text-xs text-gray-300">
+              No cierres esta ventana. Estamos confirmando tu transacción con Izipay.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -1223,14 +1265,13 @@ const startPopinSubmitWatcher = useCallback(() => {
     }
 
     try {
-      console.info('[Izipay] invoking openPopin');
       KR.openPopin?.();
       window.__IZIPAY_POPIN_OPEN__ = true;
       startPopinSubmitWatcher();
       if (!ensurePopinClickProxy()) {
         startPopinMutationObserver();
       }
-      console.info('[Izipay] popin opened');
+      attachKryptonHandlers();
     } catch (error) {
       console.error('[Izipay] openPopin failed', error);
     }
