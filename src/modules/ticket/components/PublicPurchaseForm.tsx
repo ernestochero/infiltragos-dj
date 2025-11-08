@@ -882,7 +882,6 @@ export default function PublicPurchaseForm({
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const handleMessage = (event: MessageEvent) => {
-      console.info('[Izipay] postMessage payload', event.data);
       const normalizedHints = extractIzipayHints(event.data)
         .map((hint) => normalizeEventType(hint))
         .filter(Boolean) as string[];
