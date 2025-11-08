@@ -102,6 +102,8 @@ declare global {
       renderElements?: (selector: string) => Promise<void>;
       openPopin?: (options?: { formToken?: string }) => void;
       closePopin?: () => void;
+      onSubmit?: (handler: (event: unknown) => void) => Promise<void> | void;
+      removeEventCallbacks?: (eventName: string, handler: (event: unknown) => void) => Promise<void> | void;
     };
     __IZIPAY_LOAD_PROMISE__?: Promise<unknown>;
     __IZIPAY_STYLE_PROMISE__?: Promise<void>;
@@ -150,6 +152,7 @@ export default function PublicPurchaseForm({
   const [showTicketsInline, setShowTicketsInline] = useState(false);
   const [currentOrder, setCurrentOrder] = useState<CheckoutInitResponse | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<TicketPaymentStatus | null>(null);
+  const [processingPayment, setProcessingPayment] = useState(false);
   const orderRef = useRef<CheckoutInitResponse | null>(null);
   const finalizingRef = useRef(false);
   const statusPollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -158,6 +161,14 @@ export default function PublicPurchaseForm({
   const activeOrderCodeRef = useRef<string | null>(null);
   const smartformTargetRef = useRef<HTMLDivElement | null>(null);
   const publicKeyRef = useRef<string | null>(null);
+  const popinPayButtonRef = useRef<HTMLElement | null>(null);
+  const popinPayWatcherRef = useRef<number | null>(null);
+  const popinMutationObserverRef = useRef<MutationObserver | null>(null);
+  const popinClickProxyCleanupRef = useRef<(() => void) | null>(null);
+  const kryptonHandlersRef = useRef<{
+    submit?: (event: unknown) => void;
+  } | null>(null);
+  const httpRequestOverlayShownRef = useRef(false);
   const isPast = Boolean(isPastEvent);
   const paymentsFeatureEnabled = paymentsEnabled !== false;
   const isPurchaseDisabled = isPast || ticketTypes.length === 0;
@@ -185,6 +196,146 @@ export default function PublicPurchaseForm({
   );
 
   const maxQuantity = selectedType ? Math.max(selectedType.available, 0) : 0;
+  useEffect(() => {
+    if (!selectedType) {
+      setQuantity(1);
+      return;
+    }
+    setQuantity((prev) => {
+      const limit = Math.max(maxQuantity, 1);
+      return Math.min(Math.max(1, prev), limit);
+    });
+  }, [selectedType, maxQuantity]);
+
+  const canDecreaseQuantity = selectedType ? quantity > 1 : false;
+  const canIncreaseQuantity = selectedType ? quantity < Math.max(maxQuantity, 1) : false;
+
+  const handlePopinPayClick = useCallback(() => {
+    setProcessingPayment(true);
+  }, []);
+
+  const attachPopinClickProxy = useCallback(
+    (root: HTMLElement) => {
+      popinClickProxyCleanupRef.current?.();
+      const handler = (event: Event) => {
+        const target = event.target as HTMLElement | null;
+        if (!target) return;
+        const button = target.closest('button,[role="button"]') as HTMLElement | null;
+        if (!button) return;
+        const text = button.textContent?.toUpperCase() ?? '';
+        if (text.includes('PAGAR') || text.includes('PAYER') || text.includes('PAY')) {
+          setProcessingPayment(true); // Show overlay as soon as user clicks pay
+        }
+      };
+      root.addEventListener('click', handler, true);
+      popinClickProxyCleanupRef.current = () => {
+        root.removeEventListener('click', handler, true);
+      };
+    },
+    [setProcessingPayment],
+  );
+
+  const ensurePopinClickProxy = useCallback(() => {
+    if (typeof document === 'undefined') return false;
+    const popin = document.querySelector<HTMLElement>('#kr-popin, .kr-popin');
+    if (!popin) return false;
+    attachPopinClickProxy(popin);
+    return true;
+  }, [attachPopinClickProxy]);
+
+  const startPopinMutationObserver = useCallback(() => {
+    if (typeof document === 'undefined' || typeof MutationObserver === 'undefined') return;
+    if (popinMutationObserverRef.current) return;
+    const observer = new MutationObserver(() => {
+      if (ensurePopinClickProxy()) {
+        observer.disconnect();
+        popinMutationObserverRef.current = null;
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    popinMutationObserverRef.current = observer;
+  }, [ensurePopinClickProxy]);
+
+  const detachKryptonHandlers = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    const KR = window.KR;
+    const handlers = kryptonHandlersRef.current;
+    if (!KR || !handlers || !KR.removeEventCallbacks) {
+      kryptonHandlersRef.current = null;
+      return;
+    }
+    try {
+      if (handlers.submit) {
+        KR.removeEventCallbacks('onSubmit', handlers.submit);
+      }
+    } catch (error) {
+      console.warn('[Izipay] removeEventCallbacks failed', error);
+    } finally {
+      kryptonHandlersRef.current = null;
+    }
+  }, []);
+
+  const attachKryptonHandlers = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    const KR = window.KR;
+    if (!KR?.onSubmit) return;
+    detachKryptonHandlers();
+    const submitHandler = () => {
+      console.info('[Izipay] KR.onSubmit fired');
+      setProcessingPayment(true);
+    };
+    try {
+      KR.onSubmit(submitHandler);
+      kryptonHandlersRef.current = { submit: submitHandler };
+    } catch (error) {
+      console.warn('[Izipay] KR.onSubmit registration failed', error);
+    }
+  }, [detachKryptonHandlers]);
+
+  const showProcessingOverlayFromHttpRequest = useCallback(() => {
+    if (httpRequestOverlayShownRef.current) return;
+    httpRequestOverlayShownRef.current = true;
+    setProcessingPayment(true);
+  }, []);
+
+  const hideProcessingOverlay = useCallback(() => {
+    httpRequestOverlayShownRef.current = false;
+    setProcessingPayment(false);
+  }, []);
+
+  const stopPopinSubmitWatcher = useCallback(() => {
+    if (popinPayWatcherRef.current) {
+      window.clearInterval(popinPayWatcherRef.current);
+      popinPayWatcherRef.current = null;
+    }
+    if (popinPayButtonRef.current) {
+      popinPayButtonRef.current.removeEventListener('click', handlePopinPayClick, true);
+      popinPayButtonRef.current = null;
+    }
+  }, [handlePopinPayClick]);
+
+  const startPopinSubmitWatcher = useCallback(() => {
+    if (typeof document === 'undefined') return;
+    if (popinPayWatcherRef.current) return;
+    popinPayWatcherRef.current = window.setInterval(() => {
+      if (popinPayButtonRef.current && document.contains(popinPayButtonRef.current)) {
+        return;
+      }
+      const candidates = Array.from(
+        document.querySelectorAll<HTMLElement>(
+          '#kr-popin button, .kr-popin button, #kr-popin [role="button"], .kr-popin [role="button"]',
+        ),
+      );
+      const payButton = candidates.find((candidate) => {
+        const text = candidate.textContent?.toUpperCase() ?? '';
+        return text.includes('PAGAR') || text.includes('PAYER') || text.includes('PAY');
+      });
+      if (payButton) {
+        popinPayButtonRef.current = payButton;
+        popinPayButtonRef.current.addEventListener('click', handlePopinPayClick, true);
+      }
+    }, 250);
+  }, [handlePopinPayClick]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -195,8 +346,14 @@ export default function PublicPurchaseForm({
         clearTimeout(statusPollTimeoutRef.current);
         statusPollTimeoutRef.current = null;
       }
+      stopPopinSubmitWatcher();
+      popinMutationObserverRef.current?.disconnect();
+      popinMutationObserverRef.current = null;
+      popinClickProxyCleanupRef.current?.();
+      popinClickProxyCleanupRef.current = null;
+      detachKryptonHandlers();
     };
-  }, []);
+  }, [stopPopinSubmitWatcher, detachKryptonHandlers]);
 
   const stopStatusPolling = useCallback(() => {
     if (statusPollTimeoutRef.current) {
@@ -287,18 +444,23 @@ export default function PublicPurchaseForm({
         clearCurrentOrder({ resetStatus: options?.resetStatus });
       }
       cleanupSmartformArtifacts();
+      hideProcessingOverlay();
+      stopPopinSubmitWatcher();
+      popinMutationObserverRef.current?.disconnect();
+      popinMutationObserverRef.current = null;
+      popinClickProxyCleanupRef.current?.();
+      popinClickProxyCleanupRef.current = null;
+      detachKryptonHandlers();
     },
-    [cleanupSmartformArtifacts, clearCurrentOrder],
+    [cleanupSmartformArtifacts, clearCurrentOrder, stopPopinSubmitWatcher, detachKryptonHandlers, hideProcessingOverlay],
   );
 
   const startStatusPolling = useCallback(
     (orderCode: string) => {
       if (!orderCode) return;
       if (isPollingRef.current && activeOrderCodeRef.current === orderCode) {
-        console.info('[Izipay] poll already running for', orderCode);
         return;
       }
-      console.info('[Izipay] starting status polling', orderCode);
       isPollingRef.current = true;
       activeOrderCodeRef.current = orderCode;
 
@@ -307,7 +469,6 @@ export default function PublicPurchaseForm({
         if (activeOrderCodeRef.current !== orderCode) return;
 
         try {
-          console.info('[checkout status poll] tick', orderCode, new Date().toISOString());
           const response = await fetch(
             `/api/events/${slug}/checkout/status?orderCode=${encodeURIComponent(orderCode)}`,
             {
@@ -427,9 +588,45 @@ export default function PublicPurchaseForm({
   }, [currentOrder]);
 
   useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const handleClickCapture = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+      const insidePopin = target.closest('#kr-popin') || target.closest('.kr-popin');
+      if (!insidePopin) return;
+      const button = target.closest('button,[role="button"]') as HTMLElement | null;
+      if (!button) return;
+      const text = button.textContent?.toUpperCase() ?? '';
+      if (text.includes('PAGAR') || text.includes('PAY') || button.dataset.action === 'submit') {
+        setProcessingPayment(true);
+      }
+    };
+    document.addEventListener('click', handleClickCapture, true);
+    return () => {
+      document.removeEventListener('click', handleClickCapture, true);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const body = document.body;
+    if (!body) return;
+    ensurePaymentProcessingStyles();
+    if (processingPayment) {
+      body.dataset.krPaymentProcessing = 'true';
+    } else {
+      delete body.dataset.krPaymentProcessing;
+    }
+    return () => {
+      delete body.dataset.krPaymentProcessing;
+    };
+  }, [processingPayment]);
+
+  useEffect(() => {
     if (typeof window === 'undefined') return;
     ensurePopinButtonHidden();
   }, []);
+
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -450,12 +647,88 @@ export default function PublicPurchaseForm({
   const whatsappPurchaseUrl =
     'https://api.whatsapp.com/send?phone=51903166302&text=Quiero%20comprar%20mi%20entrada%20para%20POPER';
 
+  const extractIzipayHints = useCallback((payload: unknown) => {
+    const hints: string[] = [];
+    if (!payload) return hints;
+    if (typeof payload === 'string') {
+      hints.push(payload);
+      try {
+        const parsed = JSON.parse(payload) as Record<string, unknown>;
+        if (parsed && typeof parsed === 'object') {
+          Object.keys(parsed).forEach((key) => {
+            const value = parsed[key];
+            if (typeof value === 'string') {
+              hints.push(value);
+            }
+          });
+        }
+      } catch {
+        // ignore
+      }
+      return hints;
+    }
+    if (typeof payload === 'object') {
+      const record = payload as Record<string, unknown>;
+      const push = (value: unknown) => {
+        if (typeof value === 'string') {
+          hints.push(value);
+        }
+      };
+      push(record.event);
+      push(record.type);
+      push(record.action);
+      push(record.f_name);
+      push(record.fName);
+      push(record.name);
+      push(record.command);
+      push(record.message);
+      push(record.status);
+      if (record.payload && typeof record.payload === 'object') {
+        const payloadRecord = record.payload as Record<string, unknown>;
+        push(payloadRecord.event);
+        push(payloadRecord.type);
+        push(payloadRecord.action);
+        push(payloadRecord.status);
+      }
+    }
+    return hints;
+  }, []);
+
+  const normalizeEventType = useCallback(
+    (value?: string) => (value ? value.replace(/[^a-z0-9]/gi, '').toLowerCase() : undefined),
+    [],
+  );
+
+  const normalizePayloadText = useCallback((payload: unknown) => {
+    if (!payload) return '';
+    if (typeof payload === 'string') return payload.toLowerCase();
+    try {
+      return JSON.stringify(payload).toLowerCase();
+    } catch {
+      return '';
+    }
+  }, []);
+
+  const matchesIzipayEvent = useCallback(
+    (payload: unknown, candidates: string[]) => {
+      const hints = extractIzipayHints(payload)
+        .map((hint) => normalizeEventType(hint))
+        .filter(Boolean) as string[];
+      if (hints.some((hint) => candidates.some((candidate) => hint.includes(candidate)))) {
+        return true;
+      }
+      const text = normalizePayloadText(payload);
+      return !!text && candidates.some((candidate) => text.includes(candidate));
+    },
+    [extractIzipayHints, normalizeEventType, normalizePayloadText],
+  );
+
   const handleSmartformSuccess = useCallback(
     async (event: Event) => {
-      console.info('[Izipay] payment success event', event);
       const detail = extractSmartformDetail(event);
       const order = orderRef.current;
       if (!order || finalizingRef.current) return;
+      setProcessingPayment(true);
       finalizingRef.current = true;
       setLoading(true);
       setError(null);
@@ -506,9 +779,10 @@ export default function PublicPurchaseForm({
       } finally {
         finalizingRef.current = false;
         setLoading(false);
+        hideProcessingOverlay(); // Ensure overlay is hidden after payment finishes
       }
     },
-    [clearCurrentOrder, dismissPopin, restoreDefaultTicketType, slug, startStatusPolling],
+    [clearCurrentOrder, dismissPopin, hideProcessingOverlay, restoreDefaultTicketType, slug, startStatusPolling],
   );
 
   const finalizeDeclined = useCallback(
@@ -542,6 +816,7 @@ export default function PublicPurchaseForm({
       setLoading(false);
       setPaymentStatus('DECLINED');
       setError('No pudimos completar el pago. Intenta nuevamente.');
+      hideProcessingOverlay(); // Ensure overlay is hidden after error
       const order = orderRef.current;
       if (order) {
         finalizeDeclined(order, detail).catch((err) => {
@@ -551,12 +826,21 @@ export default function PublicPurchaseForm({
       clearCurrentOrder({ resetStatus: false });
       dismissPopin({ clearOrder: false, resetStatus: false });
     },
-    [clearCurrentOrder, dismissPopin, finalizeDeclined],
+    [clearCurrentOrder, dismissPopin, finalizeDeclined, hideProcessingOverlay],
   );
 
   useEffect(() => {
+    const targets: (Document | Window)[] = [];
+    if (typeof document !== 'undefined') targets.push(document);
+    if (typeof window !== 'undefined') targets.push(window);
+    if (targets.length === 0) return;
+
     const successListener = (event: Event) => handleSmartformSuccess(event);
     const errorListener = (event: Event) => handleSmartformError(event);
+    const submitListener = (event: Event) => {
+      console.info('[Izipay] submit event detected', event.type);
+      setProcessingPayment(true); // Show overlay as soon as Izipay begins processing
+    };
     const popinCloseListener = () => {
       dismissPopin();
       if (!result) {
@@ -564,22 +848,80 @@ export default function PublicPurchaseForm({
       }
     };
 
-    document.addEventListener('kr-payment-success', successListener as EventListener);
-    document.addEventListener('krPaymentSuccess', successListener as EventListener);
-    document.addEventListener('kr-payment-error', errorListener as EventListener);
-    document.addEventListener('krPaymentError', errorListener as EventListener);
-    document.addEventListener('kr-payment-failure', errorListener as EventListener);
-    document.addEventListener('kr-popin-close', popinCloseListener);
+    const successEvents = ['kr-payment-success', 'krPaymentSuccess', 'kr-popin-success', 'krPopinSuccess'];
+    const errorEvents = [
+      'kr-payment-error',
+      'krPaymentError',
+      'kr-payment-failure',
+      'krPaymentFailure',
+      'kr-popin-error',
+      'krPopinError',
+      'kr-popin-failure',
+      'krPopinFailure',
+    ];
+    const submitEvents = ['kr-payment-submit', 'krPaymentSubmit', 'kr-popin-submit', 'krPopinSubmit'];
+    const closeEvents = ['kr-popin-close', 'krPopinClose'];
+
+    targets.forEach((target) => {
+      successEvents.forEach((eventName) => target.addEventListener(eventName, successListener as EventListener));
+      errorEvents.forEach((eventName) => target.addEventListener(eventName, errorListener as EventListener));
+      submitEvents.forEach((eventName) => target.addEventListener(eventName, submitListener));
+      closeEvents.forEach((eventName) => target.addEventListener(eventName, popinCloseListener));
+    });
 
     return () => {
-      document.removeEventListener('kr-payment-success', successListener as EventListener);
-      document.removeEventListener('krPaymentSuccess', successListener as EventListener);
-      document.removeEventListener('kr-payment-error', errorListener as EventListener);
-      document.removeEventListener('krPaymentError', errorListener as EventListener);
-      document.removeEventListener('kr-payment-failure', errorListener as EventListener);
-      document.removeEventListener('kr-popin-close', popinCloseListener);
+      targets.forEach((target) => {
+        successEvents.forEach((eventName) => target.removeEventListener(eventName, successListener as EventListener));
+        errorEvents.forEach((eventName) => target.removeEventListener(eventName, errorListener as EventListener));
+        submitEvents.forEach((eventName) => target.removeEventListener(eventName, submitListener));
+        closeEvents.forEach((eventName) => target.removeEventListener(eventName, popinCloseListener));
+      });
     };
   }, [dismissPopin, handleSmartformSuccess, handleSmartformError, result]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleMessage = (event: MessageEvent) => {
+      console.info('[Izipay] postMessage payload', event.data);
+      const normalizedHints = extractIzipayHints(event.data)
+        .map((hint) => normalizeEventType(hint))
+        .filter(Boolean) as string[];
+      const hintIncludes = (...values: string[]) =>
+        normalizedHints.some((hint) => values.some((value) => hint.includes(value)));
+
+      if (hintIncludes('httprequest')) {
+        console.info('[Izipay] message httpRequest detected');
+        showProcessingOverlayFromHttpRequest();
+        return;
+      }
+      if (hintIncludes('httpanswer')) {
+        console.info('[Izipay] message httpAnswer detected');
+        hideProcessingOverlay();
+        return;
+      }
+      if (matchesIzipayEvent(event.data, ['krpaymentsubmit', 'krpaymentformsubmit', 'krsmartformsubmit', 'submit'])) {
+        console.info('[Izipay] message submit detected');
+        showProcessingOverlayFromHttpRequest();
+        return;
+      }
+      if (matchesIzipayEvent(event.data, ['krpaymentsuccess', 'paymentaccepted', 'authorized', 'success'])) {
+        console.info('[Izipay] message success detected');
+        hideProcessingOverlay();
+        return;
+      }
+      if (matchesIzipayEvent(event.data, ['krpaymenterror', 'krpaymentfailure', 'paymentrefused', 'error', 'failure'])) {
+        console.info('[Izipay] message error/failure detected');
+        hideProcessingOverlay();
+        return;
+      }
+      if (matchesIzipayEvent(event.data, ['krpaymentclose', 'krpopinclose'])) {
+        console.info('[Izipay] message close detected');
+        hideProcessingOverlay();
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [extractIzipayHints, hideProcessingOverlay, matchesIzipayEvent, normalizeEventType, showProcessingOverlayFromHttpRequest]);
 
   return (
     <div className="space-y-4">
@@ -691,22 +1033,37 @@ export default function PublicPurchaseForm({
               </div>
               <div>
                 <label className="text-xs font-semibold text-gray-300">Cantidad</label>
-                <input
-                  type="number"
-                  min={1}
-                  max={Math.max(maxQuantity, 1)}
-                  value={quantity}
-                  onChange={(e) => {
-                    const val = Number.parseInt(e.target.value, 10);
-                    setQuantity(Number.isNaN(val) ? 1 : Math.max(1, Math.min(val, maxQuantity || 1)));
-                  }}
-                  disabled={!selectedType}
-                  className="mt-1 w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm text-gray-100 focus:border-indigo-400 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
-                />
+                <div className="mt-1 flex items-center rounded-md border border-white/10 bg-black/40 text-gray-100">
+                  <button
+                    type="button"
+                    onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
+                    disabled={!canDecreaseQuantity}
+                    aria-label="Disminuir cantidad"
+                    className="h-10 w-10 border-r border-white/10 text-lg font-semibold transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    −
+                  </button>
+                  <div className="flex-1 text-center text-base font-semibold" aria-live="polite">
+                    {selectedType ? quantity : '—'}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setQuantity((prev) => Math.min(Math.max(maxQuantity, 1), prev + 1))
+                    }
+                    disabled={!canIncreaseQuantity || maxQuantity === 0}
+                    aria-label="Aumentar cantidad"
+                    className="h-10 w-10 border-l border-white/10 text-lg font-semibold transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    +
+                  </button>
+                </div>
                 <p className="text-xs text-gray-400">
-                  {selectedType
-                    ? `Disponibles: ${maxQuantity}`
-                    : 'Selecciona un tipo de entrada para habilitar la cantidad.'}
+                  {!selectedType
+                    ? 'Selecciona un tipo de entrada para habilitar la cantidad.'
+                    : maxQuantity > 0
+                      ? `Disponibles: ${maxQuantity}`
+                      : 'Sin stock disponible para esta categoría.'}
                 </p>
               </div>
             </div>
@@ -830,6 +1187,23 @@ export default function PublicPurchaseForm({
         </div>
       )}
 
+      {processingPayment && (
+        <div
+          data-kr-processing-overlay="true"
+          className="fixed inset-0 flex items-center justify-center bg-black/80 px-4 backdrop-blur-[1px]"
+          role="status"
+          aria-live="assertive"
+          style={{ zIndex: 2147483647 }}
+        >
+          <div className="w-full max-w-sm rounded-2xl border border-white/20 bg-black/80 p-6 text-center text-sm text-gray-200 shadow-2xl">
+            <div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+            <p className="text-base font-semibold text-white">Procesando tu pago…</p>
+            <p className="mt-1 text-xs text-gray-300">
+              No cierres esta ventana. Estamos confirmando tu transacción con Izipay.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -891,10 +1265,13 @@ export default function PublicPurchaseForm({
     }
 
     try {
-      console.info('[Izipay] invoking openPopin');
       KR.openPopin?.();
       window.__IZIPAY_POPIN_OPEN__ = true;
-      console.info('[Izipay] popin opened');
+      startPopinSubmitWatcher();
+      if (!ensurePopinClickProxy()) {
+        startPopinMutationObserver();
+      }
+      attachKryptonHandlers();
     } catch (error) {
       console.error('[Izipay] openPopin failed', error);
     }
@@ -1013,7 +1390,6 @@ export default function PublicPurchaseForm({
     }
     return (event as unknown as { detail?: unknown })?.detail ?? null;
   }
-
 }
 
 function ensurePopinButtonHidden() {
@@ -1030,6 +1406,28 @@ function ensurePopinButtonHidden() {
 .kr-smart-form-modal-button {
   display: none !important;
   visibility: hidden !important;
+  pointer-events: none !important;
+}
+    `.trim();
+  }
+  document.head?.appendChild(style);
+}
+
+function ensurePaymentProcessingStyles() {
+  if (typeof document === 'undefined') return;
+  let style = document.querySelector<HTMLStyleElement>('style[data-izipay-processing-overlay="true"]');
+  if (!style) {
+    style = document.createElement('style');
+    style.type = 'text/css';
+    style.dataset.izipayProcessingOverlay = 'true';
+    style.textContent = `
+body[data-kr-payment-processing="true"] #kr-popin,
+body[data-kr-payment-processing="true"] .kr-popin {
+  z-index: 2147483000 !important;
+  pointer-events: none !important;
+}
+body[data-kr-payment-processing="true"] #kr-popin *,
+body[data-kr-payment-processing="true"] .kr-popin * {
   pointer-events: none !important;
 }
     `.trim();

@@ -57,11 +57,14 @@ async function getTransport(): Promise<nodemailer.Transporter> {
   return transporter;
 }
 
+const EMAIL_TIMEZONE = 'America/Lima';
+
 function formatDate(value?: Date | null) {
   if (!value) return '';
   return value.toLocaleString('es-PE', {
     dateStyle: 'full',
     timeStyle: 'short',
+    timeZone: EMAIL_TIMEZONE,
   });
 }
 
