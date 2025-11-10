@@ -3,6 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import TicketDownloadCard, { downloadTicketCard } from '@ticket/components/TicketDownloadCard';
 import { FaWhatsapp } from 'react-icons/fa';
+import { createScopedLogger } from '@/lib/debugLogger';
+
+const izipayLogger = createScopedLogger('Izipay');
 
 type PurchaseTicketType = {
   id: string;
@@ -269,7 +272,7 @@ export default function PublicPurchaseForm({
         KR.removeEventCallbacks('onSubmit', handlers.submit);
       }
     } catch (error) {
-      console.warn('[Izipay] removeEventCallbacks failed', error);
+      izipayLogger.warn('removeEventCallbacks failed', error);
     } finally {
       kryptonHandlersRef.current = null;
     }
@@ -281,14 +284,14 @@ export default function PublicPurchaseForm({
     if (!KR?.onSubmit) return;
     detachKryptonHandlers();
     const submitHandler = () => {
-      console.info('[Izipay] KR.onSubmit fired');
+      izipayLogger.debug('KR.onSubmit fired');
       setProcessingPayment(true);
     };
     try {
       KR.onSubmit(submitHandler);
       kryptonHandlersRef.current = { submit: submitHandler };
     } catch (error) {
-      console.warn('[Izipay] KR.onSubmit registration failed', error);
+      izipayLogger.warn('KR.onSubmit registration failed', error);
     }
   }, [detachKryptonHandlers]);
 
@@ -386,7 +389,7 @@ export default function PublicPurchaseForm({
       try {
         void Promise.resolve(global.KR.removeForms());
       } catch (error) {
-        console.warn('[Izipay] removeForms cleanup failed', error);
+        izipayLogger.warn('removeForms cleanup failed', error);
       }
     }
 
@@ -496,7 +499,7 @@ export default function PublicPurchaseForm({
             }
           }
         } catch (err) {
-          console.error('[checkout status poll] failed', err);
+          izipayLogger.error('Checkout status poll failed', err);
         }
 
         statusPollTimeoutRef.current = setTimeout(() => {
@@ -570,7 +573,7 @@ export default function PublicPurchaseForm({
       startStatusPolling(init.orderCode);
       await initializeSmartform(init);
     } catch (err) {
-      console.error(err);
+      izipayLogger.error('Checkout initialization failed', err);
       setError(err instanceof Error ? err.message : 'Error desconocido');
       clearCurrentOrder();
       dismissPopin({ clearOrder: false });
@@ -771,7 +774,7 @@ export default function PublicPurchaseForm({
           startStatusPolling(finalizePayload.orderCode);
         }
       } catch (err) {
-        console.error('[Smartform success handler] finalize error', err);
+        izipayLogger.error('Finalize error after success event', err);
         setError(err instanceof Error ? err.message : 'No pudimos finalizar el pago.');
         if (order?.orderCode) {
           startStatusPolling(order.orderCode);
@@ -801,7 +804,7 @@ export default function PublicPurchaseForm({
           body: JSON.stringify(body),
         });
       } catch (error) {
-        console.warn('[Smartform decline notifier] request failed', error);
+        izipayLogger.warn('Smartform decline notifier request failed', error);
       }
     },
     [slug],
@@ -809,9 +812,9 @@ export default function PublicPurchaseForm({
 
   const handleSmartformError = useCallback(
     (event: Event) => {
-      console.warn('[Izipay] payment error event', event);
+      izipayLogger.warn('Payment error event received', event);
       const detail = extractSmartformDetail(event);
-      console.error('[Smartform error]', detail);
+      izipayLogger.error('Smartform error detail', detail);
       finalizingRef.current = false;
       setLoading(false);
       setPaymentStatus('DECLINED');
@@ -820,7 +823,7 @@ export default function PublicPurchaseForm({
       const order = orderRef.current;
       if (order) {
         finalizeDeclined(order, detail).catch((err) => {
-          console.warn('[Smartform error] finalizeDeclined failed', err);
+          izipayLogger.warn('finalizeDeclined follow-up failed', err);
         });
       }
       clearCurrentOrder({ resetStatus: false });
@@ -838,7 +841,7 @@ export default function PublicPurchaseForm({
     const successListener = (event: Event) => handleSmartformSuccess(event);
     const errorListener = (event: Event) => handleSmartformError(event);
     const submitListener = (event: Event) => {
-      console.info('[Izipay] submit event detected', event.type);
+      izipayLogger.debug('submit event detected', event.type);
       setProcessingPayment(true); // Show overlay as soon as Izipay begins processing
     };
     const popinCloseListener = () => {
@@ -889,32 +892,32 @@ export default function PublicPurchaseForm({
         normalizedHints.some((hint) => values.some((value) => hint.includes(value)));
 
       if (hintIncludes('httprequest')) {
-        console.info('[Izipay] message httpRequest detected');
+        izipayLogger.debug('message httpRequest detected');
         showProcessingOverlayFromHttpRequest();
         return;
       }
       if (hintIncludes('httpanswer')) {
-        console.info('[Izipay] message httpAnswer detected');
+        izipayLogger.debug('message httpAnswer detected');
         hideProcessingOverlay();
         return;
       }
       if (matchesIzipayEvent(event.data, ['krpaymentsubmit', 'krpaymentformsubmit', 'krsmartformsubmit', 'submit'])) {
-        console.info('[Izipay] message submit detected');
+        izipayLogger.debug('message submit detected');
         showProcessingOverlayFromHttpRequest();
         return;
       }
       if (matchesIzipayEvent(event.data, ['krpaymentsuccess', 'paymentaccepted', 'authorized', 'success'])) {
-        console.info('[Izipay] message success detected');
+        izipayLogger.debug('message success detected');
         hideProcessingOverlay();
         return;
       }
       if (matchesIzipayEvent(event.data, ['krpaymenterror', 'krpaymentfailure', 'paymentrefused', 'error', 'failure'])) {
-        console.info('[Izipay] message error/failure detected');
+        izipayLogger.debug('message error/failure detected');
         hideProcessingOverlay();
         return;
       }
       if (matchesIzipayEvent(event.data, ['krpaymentclose', 'krpopinclose'])) {
-        console.info('[Izipay] message close detected');
+        izipayLogger.debug('message close detected');
         hideProcessingOverlay();
       }
     };
@@ -1272,7 +1275,7 @@ export default function PublicPurchaseForm({
       }
       attachKryptonHandlers();
     } catch (error) {
-      console.error('[Izipay] openPopin failed', error);
+      izipayLogger.error('openPopin failed', error);
     }
   }
 
