@@ -3,12 +3,7 @@
 import Link from "next/link";
 import useSWR from "swr";
 import { useMemo, useState } from "react";
-import {
-  FaArrowLeft,
-  FaCrown,
-  FaMicrophoneLines,
-  FaCirclePlay,
-} from "react-icons/fa6";
+import { FaArrowLeft, FaCrown, FaCirclePlay } from "react-icons/fa6";
 import ModalRequestForm from "@/modules/dj/components/ModalRequestForm";
 import type { TopEntry } from "@/modules/dj/lib/top";
 
@@ -82,7 +77,7 @@ export default function HistoricalTopPage() {
             href="/dj"
             className="inline-flex items-center gap-2 text-sm font-semibold text-accent transition hover:text-accent-hover"
           >
-            <FaArrowLeft className="h-4 w-4" /> Volver a la cola
+            <FaArrowLeft className="h-4 w-4" /> Volver
           </Link>
           <div className="flex flex-col items-start gap-2 text-sm text-gray-400 sm:flex-row sm:items-center sm:gap-4">
             <span>{updatedAtLabel}</span>
@@ -101,13 +96,13 @@ export default function HistoricalTopPage() {
 
         <section className="rounded-xl bg-card-bg p-6 shadow-lg">
           <div className="flex items-center gap-3">
-            <FaCrown className="h-6 w-6 text-accent" />
+            <FaCrown className="h-8 w-8 text-accent" />
             <div>
               <h1 className="text-2xl font-extrabold tracking-tight">
-                Top 30 histórico de pedidos
+                Nuestro Top 30 de pedidos
               </h1>
               <p className="text-sm text-gray-400">
-                El resumen global de las canciones con más demanda desde que usamos la app.
+                Resumen global de las canciones con más demanda.
               </p>
             </div>
           </div>
@@ -137,35 +132,27 @@ export default function HistoricalTopPage() {
                     key={`${entry.songTitle}-${entry.artist}`}
                     className="flex flex-col gap-4 rounded-lg border border-gray-700 bg-gray-800/50 p-4 shadow-sm transition hover:border-accent/60 hover:bg-gray-800"
                   >
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <p className="text-sm font-semibold text-gray-400">
-                          #{idx + 1}
-                        </p>
-                        <h2 className="text-xl font-bold text-white">
-                          {entry.songTitle}
-                        </h2>
-                        <p className="text-sm text-gray-400">{entry.artist}</p>
-                      </div>
-                      <div className="flex items-center gap-3 text-sm text-gray-300">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                      <h2 className="text-xl font-bold text-white truncate sm:mr-4">
+                        {entry.songTitle}
+                      </h2>
+                      <p className="text-sm text-gray-400 truncate sm:mt-1">
+                        {entry.artist}
+                      </p>
+
+                      <div className="flex items-center mt-2 sm:mt-0 gap-3 text-sm text-gray-300 sm:ml-auto sm:mr-4">
                         <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-3 py-1 text-accent">
-                          <FaMicrophoneLines className="h-4 w-4" /> {entry.karaoke}
+                          #{idx + 1}
                         </span>
                         <span className="inline-flex items-center gap-1 rounded-full bg-indigo-500/10 px-3 py-1 text-indigo-300">
-                          <FaCirclePlay className="h-4 w-4" /> {entry.dj}
-                        </span>
-                        <span className="inline-flex items-center gap-1 rounded-full bg-gray-700 px-3 py-1 text-white">
-                          Total {entry.total}
+                          <FaCirclePlay className="h-4 w-4" /> {entry.total}
                         </span>
                       </div>
-                    </div>
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                      <p className="text-xs text-gray-500">
-                        Sumamos pedidos y votos acumulados para determinar la posición.
-                      </p>
                       <button
-                        onClick={() => openModalForSong(entry.songTitle, entry.artist)}
-                        className="inline-flex items-center justify-center rounded-full bg-accent px-4 py-2 text-sm font-semibold text-dark-bg shadow transition hover:bg-accent-hover"
+                        onClick={() =>
+                          openModalForSong(entry.songTitle, entry.artist)
+                        }
+                        className="mt-2 sm:mt-0 inline-flex items-center justify-center rounded-full bg-accent px-4 py-2 text-sm font-semibold text-dark-bg shadow transition hover:bg-accent-hover"
                       >
                         Pedir
                       </button>

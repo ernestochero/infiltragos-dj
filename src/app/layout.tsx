@@ -1,12 +1,12 @@
-import '../styles/globals.css';
-import type { ReactNode } from 'react';
+import "../styles/globals.css";
+import type { ReactNode } from "react";
 
-export const metadata = { title: 'DJ Requests' };
+export const metadata = { title: "DJ Requests" };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-gray-900 text-white">{children}</body>
+      <body className="min-h-screen bg-dark-bg text-white">{children}</body>
     </html>
   );
 }
