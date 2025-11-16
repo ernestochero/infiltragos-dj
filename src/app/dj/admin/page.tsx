@@ -1,6 +1,6 @@
-'use client';
-import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+"use client";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   DndContext,
   PointerSensor,
@@ -8,22 +8,21 @@ import {
   useSensors,
   DragEndEvent,
   DragOverlay,
-} from '@dnd-kit/core';
-import { arrayMove } from '@dnd-kit/sortable';
-import Column from '@dj/components/kanban/Column';
-import type { Request, RequestStatus } from '@prisma/client';
-import { filterRecent } from '@dj/lib/filterRecent';
+} from "@dnd-kit/core";
+import { arrayMove } from "@dnd-kit/sortable";
+import Column from "@dj/components/kanban/Column";
+import type { Request, RequestStatus } from "@prisma/client";
+import { filterRecent } from "@dj/lib/filterRecent";
 
- type BoardState = Record<RequestStatus, Request[]>;
- const STATUSES: RequestStatus[] = ['PENDING', 'PLAYING', 'DONE', 'REJECTED'];
+type BoardState = Record<RequestStatus, Request[]>;
+const STATUSES: RequestStatus[] = ["PENDING", "PLAYING", "DONE", "REJECTED"];
 
 const STATUS_LABELS: Record<RequestStatus, string> = {
-  PENDING: 'PENDIENTES',
-  PLAYING: 'REPRODUCIENDO',
-  DONE: 'COMPLETADAS',
-  REJECTED: 'RECHAZADAS',
+  PENDING: "PENDIENTES",
+  PLAYING: "REPRODUCIENDO",
+  DONE: "COMPLETADAS",
+  REJECTED: "RECHAZADAS",
 };
-
 
 const findById = (board: BoardState, id: string) => {
   for (const s of STATUSES) {
@@ -36,18 +35,18 @@ const findById = (board: BoardState, id: string) => {
 export default function AdminPage() {
   const router = useRouter();
   const [board, setBoard] = useState<BoardState>({
-     PENDING: [],
-     PLAYING: [],
-     DONE: [],
-     REJECTED: [],
-   });
+    PENDING: [],
+    PLAYING: [],
+    DONE: [],
+    REJECTED: [],
+  });
   const [rawRequests, setRawRequests] = useState<Request[]>([]);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
 
   const analytics = useMemo(() => {
@@ -90,11 +89,23 @@ export default function AdminPage() {
 
     const songTotals = new Map<
       string,
-      { title: string; artist: string; total: number; karaoke: number; dj: number }
+      {
+        title: string;
+        artist: string;
+        total: number;
+        karaoke: number;
+        dj: number;
+      }
     >();
     const songWeekly = new Map<
       string,
-      { title: string; artist: string; total: number; karaoke: number; dj: number }
+      {
+        title: string;
+        artist: string;
+        total: number;
+        karaoke: number;
+        dj: number;
+      }
     >();
     const artistTotals = new Map<
       string,
@@ -113,7 +124,9 @@ export default function AdminPage() {
       base.statusCounts[req.status] = (base.statusCounts[req.status] || 0) + 1;
       if (req.isKaraoke) karaokeDemand += demand;
 
-      uniqueSongs.add(`${req.songTitle.toLowerCase()}::${req.artist.toLowerCase()}`);
+      uniqueSongs.add(
+        `${req.songTitle.toLowerCase()}::${req.artist.toLowerCase()}`
+      );
       uniqueArtists.add(req.artist.toLowerCase());
 
       const songKey = `${req.songTitle}::${req.artist}`;
@@ -152,7 +165,9 @@ export default function AdminPage() {
         artistEntry.dj += demand;
       }
 
-      const createdAtValue = req.createdAt ? new Date(req.createdAt).getTime() : NaN;
+      const createdAtValue = req.createdAt
+        ? new Date(req.createdAt).getTime()
+        : NaN;
       if (Number.isFinite(createdAtValue) && createdAtValue >= weekCutoff) {
         if (!songWeekly.has(songKey)) {
           songWeekly.set(songKey, {
@@ -202,10 +217,15 @@ export default function AdminPage() {
   };
 
   const fetchData = async () => {
-    const res = await fetch('/api/requests');
+    const res = await fetch("/api/requests");
     const list: Request[] = await res.json();
     setRawRequests(list);
-    const grouped: BoardState = { PENDING: [], PLAYING: [], DONE: [], REJECTED: [] };
+    const grouped: BoardState = {
+      PENDING: [],
+      PLAYING: [],
+      DONE: [],
+      REJECTED: [],
+    };
     const ordered = [...list].sort((a, b) => a.sortIndex - b.sortIndex);
     for (const item of ordered) {
       grouped[item.status].push(item);
@@ -216,24 +236,24 @@ export default function AdminPage() {
     setLastUpdated(new Date());
   };
 
-   useEffect(() => {
-     fetchData();
-     const id = setInterval(fetchData, 10000);
-     return () => clearInterval(id);
-   }, []);
+  useEffect(() => {
+    fetchData();
+    const id = setInterval(fetchData, 10000);
+    return () => clearInterval(id);
+  }, []);
 
   const findColumn = (id: string): RequestStatus | undefined => {
     return STATUSES.find((status) => board[status].some((r) => r.id === id));
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
-     const { active, over } = event;
-     if (!over) return;
-     const fromCol = findColumn(String(active.id));
-     const overId = String(over.id);
-     const toCol = STATUSES.includes(overId as RequestStatus)
-       ? (overId as RequestStatus)
-       : findColumn(overId);
+    const { active, over } = event;
+    if (!over) return;
+    const fromCol = findColumn(String(active.id));
+    const overId = String(over.id);
+    const toCol = STATUSES.includes(overId as RequestStatus)
+      ? (overId as RequestStatus)
+      : findColumn(overId);
     if (!fromCol || !toCol) return;
 
     if (fromCol !== toCol) {
@@ -257,15 +277,17 @@ export default function AdminPage() {
         // if we dropped into PLAYING and there was a previously playing item,
         // move that previous one to DONE automatically
         if (
-          toCol === 'PLAYING' &&
+          toCol === "PLAYING" &&
           prevPlayingTop &&
           prevPlayingTop.id !== String(active.id)
         ) {
           // remove previous playing from wherever it currently is in the draft
-          const prevIdx = draft.PLAYING.findIndex((r) => r.id === prevPlayingTop.id);
+          const prevIdx = draft.PLAYING.findIndex(
+            (r) => r.id === prevPlayingTop.id
+          );
           if (prevIdx !== -1) {
             const [prev] = draft.PLAYING.splice(prevIdx, 1);
-            prev.status = 'DONE';
+            prev.status = "DONE";
             prev.sortIndex = draft.DONE.length;
             prev.updatedAt = new Date();
             draft.DONE.push(prev);
@@ -279,21 +301,27 @@ export default function AdminPage() {
       try {
         // persist primary change (moved card)
         await fetch(`/api/requests/${active.id}/status`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: toCol, sortIndex: board[toCol].length }),
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            status: toCol,
+            sortIndex: board[toCol].length,
+          }),
         });
 
         // persist auto-advance if applicable
         if (
-          toCol === 'PLAYING' &&
+          toCol === "PLAYING" &&
           prevPlayingTop &&
           prevPlayingTop.id !== String(active.id)
         ) {
           await fetch(`/api/requests/${prevPlayingTop.id}/status`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: 'DONE', sortIndex: board.DONE.length }),
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              status: "DONE",
+              sortIndex: board.DONE.length,
+            }),
           });
         }
       } catch {
@@ -309,10 +337,13 @@ export default function AdminPage() {
         draft[fromCol] = newColumn;
       });
       try {
-        await fetch('/api/requests/reorder', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ columnStatus: fromCol, orderedIds: newColumn.map((i) => i.id) }),
+        await fetch("/api/requests/reorder", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            columnStatus: fromCol,
+            orderedIds: newColumn.map((i) => i.id),
+          }),
         });
       } catch {
         rollback();
@@ -326,16 +357,18 @@ export default function AdminPage() {
       const fromIdx = draft.PENDING.findIndex((r) => r.id === item.id);
       if (fromIdx === -1) return;
       const [moved] = draft.PENDING.splice(fromIdx, 1);
-      moved.status = 'PLAYING';
+      moved.status = "PLAYING";
       moved.sortIndex = draft.PLAYING.length;
       moved.updatedAt = new Date();
       draft.PLAYING.push(moved);
 
       if (prevPlayingTop && prevPlayingTop.id !== item.id) {
-        const prevIdx = draft.PLAYING.findIndex((r) => r.id === prevPlayingTop.id);
+        const prevIdx = draft.PLAYING.findIndex(
+          (r) => r.id === prevPlayingTop.id
+        );
         if (prevIdx !== -1) {
           const [prev] = draft.PLAYING.splice(prevIdx, 1);
-          prev.status = 'DONE';
+          prev.status = "DONE";
           prev.sortIndex = draft.DONE.length;
           prev.updatedAt = new Date();
           draft.DONE.push(prev);
@@ -348,16 +381,22 @@ export default function AdminPage() {
 
     try {
       await fetch(`/api/requests/${item.id}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'PLAYING', sortIndex: board.PLAYING.length }),
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: "PLAYING",
+          sortIndex: board.PLAYING.length,
+        }),
       });
 
       if (prevPlayingTop && prevPlayingTop.id !== item.id) {
         await fetch(`/api/requests/${prevPlayingTop.id}/status`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: 'DONE', sortIndex: board.DONE.length }),
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            status: "DONE",
+            sortIndex: board.DONE.length,
+          }),
         });
       }
     } catch {
@@ -366,8 +405,8 @@ export default function AdminPage() {
   };
 
   const handleLogout = async () => {
-    await fetch('/api/logout', { method: 'POST' });
-    router.push('/login');
+    await fetch("/api/logout", { method: "POST" });
+    router.push("/login");
   };
 
   const statusSnapshot = {
@@ -382,25 +421,28 @@ export default function AdminPage() {
     : 0;
 
   const lastSyncLabel = lastUpdated
-    ? lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    : '—';
+    ? lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    : "—";
 
   return (
     <main className="relative p-4 space-y-6">
-      <div className="flex justify-end gap-3">
-        <button
-          onClick={() => setShowAnalytics(true)}
-          disabled={showAnalytics}
-          className="rounded-full border border-slate-600 bg-slate-900 px-4 py-2 text-sm font-medium text-slate-200 shadow hover:border-slate-400 hover:text-white transition disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          Ver estadísticas
-        </button>
-        <button
-          onClick={handleLogout}
-          className="text-sm text-blue-500 underline"
-        >
-          Logout
-        </button>
+      <div className="flex items-center justify-between flex-wrap mb-4 gap-4">
+        <h2 className="text-lg font-semibold text-white">Kanban de pedidos</h2>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowAnalytics(true)}
+            disabled={showAnalytics}
+            className="rounded-full border border-slate-600 bg-slate-900 px-4 py-2 text-sm font-medium text-slate-200 shadow hover:border-slate-400 hover:text-white transition disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Ver estadísticas
+          </button>
+          <button
+            onClick={handleLogout}
+            className="text-sm text-blue-500 underline"
+          >
+            Logout
+          </button>
+        </div>
       </div>
       {showAnalytics ? (
         <div
@@ -413,7 +455,9 @@ export default function AdminPage() {
           >
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-semibold text-white">Estadísticas de pedidos</h2>
+                <h2 className="text-2xl font-semibold text-white">
+                  Estadísticas de pedidos
+                </h2>
                 <p className="text-sm text-slate-400">
                   Última sync: {lastSyncLabel}
                 </p>
@@ -429,12 +473,18 @@ export default function AdminPage() {
               <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <div className="rounded-lg border border-slate-700 bg-slate-900/60 p-4 shadow">
                   <p className="text-sm text-slate-400">Pedidos totales</p>
-                  <p className="mt-1 text-3xl font-semibold">{analytics.totalDemand}</p>
-                  <p className="text-xs text-slate-500">Incluye votos acumulados</p>
+                  <p className="mt-1 text-3xl font-semibold">
+                    {analytics.totalDemand}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Incluye votos acumulados
+                  </p>
                 </div>
                 <div className="rounded-lg border border-slate-700 bg-slate-900/60 p-4 shadow">
                   <p className="text-sm text-slate-400">Canciones únicas</p>
-                  <p className="mt-1 text-3xl font-semibold">{analytics.uniqueSongs}</p>
+                  <p className="mt-1 text-3xl font-semibold">
+                    {analytics.uniqueSongs}
+                  </p>
                   <p className="text-xs text-slate-500">
                     Artistas distintos: {analytics.uniqueArtists}
                   </p>
@@ -454,7 +504,9 @@ export default function AdminPage() {
                     <li>Pendientes: {statusSnapshot.pending}</li>
                     <li>Reproduciendo: {statusSnapshot.playing}</li>
                     <li>Última hora (done): {statusSnapshot.doneRecent}</li>
-                    <li>Rechazadas (reciente): {statusSnapshot.rejectedRecent}</li>
+                    <li>
+                      Rechazadas (reciente): {statusSnapshot.rejectedRecent}
+                    </li>
                   </ul>
                 </div>
               </section>
@@ -465,7 +517,9 @@ export default function AdminPage() {
                   </h3>
                   <ul className="mt-4 space-y-3">
                     {analytics.topSongs.length === 0 ? (
-                      <li className="text-sm text-slate-500">Sin registros todavía.</li>
+                      <li className="text-sm text-slate-500">
+                        Sin registros todavía.
+                      </li>
                     ) : (
                       analytics.topSongs.map((item, idx) => (
                         <li
@@ -476,7 +530,9 @@ export default function AdminPage() {
                             <p className="text-sm font-medium text-white">
                               #{idx + 1} {item.title}
                             </p>
-                            <p className="text-xs text-slate-400">{item.artist}</p>
+                            <p className="text-xs text-slate-400">
+                              {item.artist}
+                            </p>
                           </div>
                           <div className="text-right">
                             <p className="text-sm font-semibold text-accent">
@@ -510,7 +566,9 @@ export default function AdminPage() {
                             <p className="text-sm font-medium text-white">
                               #{idx + 1} {item.title}
                             </p>
-                            <p className="text-xs text-slate-400">{item.artist}</p>
+                            <p className="text-xs text-slate-400">
+                              {item.artist}
+                            </p>
                           </div>
                           <div className="text-right">
                             <p className="text-sm font-semibold text-emerald-400">
@@ -528,10 +586,14 @@ export default function AdminPage() {
               </section>
               <section className="grid gap-4 lg:grid-cols-2">
                 <div className="rounded-lg border border-slate-700 bg-slate-900/60 p-4 shadow">
-                  <h3 className="text-lg font-semibold text-white">Top artistas</h3>
+                  <h3 className="text-lg font-semibold text-white">
+                    Top artistas
+                  </h3>
                   <ul className="mt-4 space-y-3">
                     {analytics.topArtists.length === 0 ? (
-                      <li className="text-sm text-slate-500">Sin artistas destacados todavía.</li>
+                      <li className="text-sm text-slate-500">
+                        Sin artistas destacados todavía.
+                      </li>
                     ) : (
                       analytics.topArtists.map((artist, idx) => (
                         <li
@@ -559,13 +621,19 @@ export default function AdminPage() {
                     Distribución histórica
                   </h3>
                   <ul className="mt-4 space-y-2 text-sm text-slate-300">
-                    <li>Pendientes creadas: {analytics.statusCounts.PENDING}</li>
-                    <li>Marcadas como reproduciendo: {analytics.statusCounts.PLAYING}</li>
+                    <li>
+                      Pendientes creadas: {analytics.statusCounts.PENDING}
+                    </li>
+                    <li>
+                      Marcadas como reproduciendo:{" "}
+                      {analytics.statusCounts.PLAYING}
+                    </li>
                     <li>Completadas: {analytics.statusCounts.DONE}</li>
                     <li>Rechazadas: {analytics.statusCounts.REJECTED}</li>
                   </ul>
                   <p className="mt-3 text-xs text-slate-500">
-                    Cada registro contabiliza la canción única en la tabla de pedidos. Usa estos totales para medir el embudo general.
+                    Cada registro contabiliza la canción única en la tabla de
+                    pedidos. Usa estos totales para medir el embudo general.
                   </p>
                 </div>
               </section>
@@ -574,14 +642,14 @@ export default function AdminPage() {
         </div>
       ) : null}
       <section className="rounded-lg border border-slate-700 bg-slate-900/60 p-4 shadow">
-        <h2 className="text-lg font-semibold text-white mb-4">
-          Kanban de peticiones
-        </h2>
         <DndContext
           sensors={sensors}
           onDragStart={(e) => setActiveId(String(e.active.id))}
           onDragCancel={() => setActiveId(null)}
-          onDragEnd={(e) => { setActiveId(null); handleDragEnd(e); }}
+          onDragEnd={(e) => {
+            setActiveId(null);
+            handleDragEnd(e);
+          }}
         >
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             {STATUSES.map((status) => (
@@ -590,20 +658,25 @@ export default function AdminPage() {
                 title={STATUS_LABELS[status]}
                 status={status}
                 items={board[status]}
-                onItemClick={status === 'PENDING' ? handleCardClick : undefined}
+                onItemClick={status === "PENDING" ? handleCardClick : undefined}
               />
             ))}
           </div>
           <DragOverlay
-            dropAnimation={{ duration: 280, easing: 'cubic-bezier(0.2, 0.8, 0, 1)' }}
+            dropAnimation={{
+              duration: 280,
+              easing: "cubic-bezier(0.2, 0.8, 0, 1)",
+            }}
           >
             {activeId ? (
               <div className="rounded bg-slate-700 text-white px-3 py-2 shadow-lg">
                 {(() => {
                   const it = findById(board, activeId!);
                   return it
-                    ? `${it.songTitle} — ${it.artist}${it.tableOrName ? ` · ${it.tableOrName}` : ''}`
-                    : 'Moviendo…';
+                    ? `${it.songTitle} — ${it.artist}${
+                        it.tableOrName ? ` · ${it.tableOrName}` : ""
+                      }`
+                    : "Moviendo…";
                 })()}
               </div>
             ) : null}

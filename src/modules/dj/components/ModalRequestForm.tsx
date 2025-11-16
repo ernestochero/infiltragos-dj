@@ -168,10 +168,14 @@ export default function ModalRequestForm({
         const idx = active ? focusables.indexOf(active) : -1;
         e.preventDefault();
         if (e.shiftKey) {
-          const prev = idx <= 0 ? focusables[focusables.length - 1] : focusables[idx - 1];
+          const prev =
+            idx <= 0 ? focusables[focusables.length - 1] : focusables[idx - 1];
           prev?.focus();
         } else {
-          const next = idx < 0 || idx >= focusables.length - 1 ? focusables[0] : focusables[idx + 1];
+          const next =
+            idx < 0 || idx >= focusables.length - 1
+              ? focusables[0]
+              : focusables[idx + 1];
           next?.focus();
         }
       }
@@ -319,7 +323,7 @@ export default function ModalRequestForm({
               )}
             </div>
 
-            <div className="flex justify-center my-2">
+            {/* <div className="flex justify-center my-2">
               <div className="relative bg-slate-200 rounded-lg p-0.5 flex w-40">
                 <button
                   type="button"
@@ -348,7 +352,7 @@ export default function ModalRequestForm({
                   DJ
                 </button>
               </div>
-            </div>
+            </div> */}
 
             <button
               className="w-full bg-accent hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-accent-hover text-dark-bg px-4 py-2.5 rounded-full font-bold transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed hover:scale-105"
